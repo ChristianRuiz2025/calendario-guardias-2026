@@ -41,8 +41,12 @@ const SHIFT_TEMPLATES = [
   { id: "10-19", label: "10 a 7", start: "10:00", end: "19:00", row: 2 },
 ];
 
-const AUDIT_ROTATION = ["jona", "abi", "chris"];
-const AUDIT_START_DATE = new Date(YEAR, 3, 27);
+// Rotacion por defecto de auditorias. Cada periodo empieza el lunes indicado y
+// rota semana a semana en el orden dado hasta que empieza el siguiente periodo.
+const AUDIT_ROTATIONS = [
+  { start: new Date(YEAR, 3, 27), order: ["jona", "abi", "chris"] },
+  { start: new Date(YEAR, 10, 2), order: ["abi", "jona", "chris"] },
+];
 
 const HOLIDAYS_2026 = new Set([
   "2026-01-01",
@@ -93,17 +97,15 @@ function weekKey(week) {
 }
 
 function getDefaultAuditGuardForWeek(week, guards) {
-  const auditStartWeek = startOfWorkWeek(AUDIT_START_DATE);
   const weekStart = startOfWorkWeek(week[0]);
-  const weekEnd = new Date(week[4]);
-  weekEnd.setHours(23, 59, 59, 999);
+  const rotation = AUDIT_ROTATIONS.filter((period) => startOfWorkWeek(period.start) <= weekStart).at(-1);
 
-  if (weekEnd < AUDIT_START_DATE) {
+  if (!rotation) {
     return null;
   }
 
-  const weeksSinceStart = Math.floor((weekStart - auditStartWeek) / (7 * 24 * 60 * 60 * 1000));
-  const guardId = AUDIT_ROTATION[((weeksSinceStart % AUDIT_ROTATION.length) + AUDIT_ROTATION.length) % AUDIT_ROTATION.length];
+  const weeksSinceStart = Math.round((weekStart - startOfWorkWeek(rotation.start)) / (7 * 24 * 60 * 60 * 1000));
+  const guardId = rotation.order[weeksSinceStart % rotation.order.length];
   return guards.find((guard) => guard.id === guardId) ?? null;
 }
 
@@ -302,7 +304,11 @@ function downloadTextFile(filename, content) {
 
 function App() {
   const [session, setSession] = useState(undefined);
-  const [monthIndex, setMonthIndex] = useState(3);
+  // Abre en el mes actual (si estamos fuera de 2026, en enero).
+  const [monthIndex, setMonthIndex] = useState(() => {
+    const today = new Date();
+    return today.getFullYear() === YEAR ? today.getMonth() : 0;
+  });
   const [selectedGuardId, setSelectedGuardId] = useState("all");
   const {
     guards,
