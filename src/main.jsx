@@ -158,6 +158,79 @@ function formatIcsDateTime(date, time) {
   return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}T${hours}${minutes}00`;
 }
 
+function formatIcsDate(date) {
+  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}`;
+}
+
+// Semanas (lunes) del anio con la persona de auditorias que les toca.
+function buildAuditWeeks(guards, auditAssignments) {
+  const weeks = [];
+  const monday = startOfWorkWeek(new Date(YEAR, 0, 1));
+  if (monday.getFullYear() < YEAR) {
+    monday.setDate(monday.getDate() + 7);
+  }
+
+  while (monday.getFullYear() === YEAR) {
+    const guard = getAuditGuard(monday, guards, auditAssignments);
+    if (guard) {
+      weeks.push({ monday: new Date(monday), guard });
+    }
+    monday.setDate(monday.getDate() + 7);
+  }
+
+  return weeks;
+}
+
+// Un evento de todo el dia de lunes a viernes por cada semana de auditorias.
+// Cada semana cuenta en el mes de su lunes, asi no se repite en el paquete anual.
+function makeAuditEvents(auditWeeks, monthIndex, selectedGuardId, exportId, stamp) {
+  return auditWeeks
+    .filter(({ monday, guard }) => {
+      return (
+        (monthIndex === null || monday.getMonth() === monthIndex) &&
+        (selectedGuardId === "all" || guard.id === selectedGuardId)
+      );
+    })
+    .map(({ monday, guard }) => {
+      const saturday = new Date(monday);
+      saturday.setDate(monday.getDate() + 5);
+
+      return [
+        "BEGIN:VEVENT",
+        `UID:${exportId}-auditorias-${dateKey(monday)}-${guard.id}@guardias-2026`,
+        `DTSTAMP:${stamp}`,
+        `DTSTART;VALUE=DATE:${formatIcsDate(monday)}`,
+        `DTEND;VALUE=DATE:${formatIcsDate(saturday)}`,
+        `SUMMARY:${escapeIcsText(`Auditorias ${guard.name}`)}`,
+        `DESCRIPTION:${escapeIcsText(`Semana de auditorias de ${guard.name} (lunes a viernes).`)}`,
+        "CATEGORIES:Auditorias",
+        "CLASS:PUBLIC",
+        "TRANSP:TRANSPARENT",
+        "STATUS:CONFIRMED",
+        "X-MICROSOFT-CDO-ALLDAYEVENT:TRUE",
+        "X-MICROSOFT-CDO-BUSYSTATUS:FREE",
+        "X-MICROSOFT-CDO-INTENDEDSTATUS:FREE",
+        "END:VEVENT",
+      ].join("\r\n");
+    });
+}
+
+function makeIcsCalendar(calendarName, events) {
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Calendario Guardias 2026//ES",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    `X-WR-CALNAME:${escapeIcsText(calendarName)}`,
+    `NAME:${escapeIcsText(calendarName)}`,
+    `X-WR-TIMEZONE:${TIMEZONE_ID}`,
+    ...makeTimezoneBlock(),
+    ...events,
+    "END:VCALENDAR",
+  ].join("\r\n");
+}
+
 function makeTimezoneBlock() {
   return [
     "BEGIN:VTIMEZONE",
@@ -177,7 +250,8 @@ function makeIcs(
   schedule,
   selectedGuardId = "all",
   exportId = crypto.randomUUID(),
-  calendarName = `Guardias ${MONTHS[monthIndex]} ${YEAR}`
+  calendarName = `Guardias ${MONTHS[monthIndex]} ${YEAR}`,
+  auditWeeks = []
 ) {
   const events = [];
   const daysInMonth = new Date(YEAR, monthIndex + 1, 0).getDate();
@@ -231,19 +305,9 @@ function makeIcs(
     });
   }
 
-  return [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Calendario Guardias 2026//ES",
-    "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
-    `X-WR-CALNAME:${escapeIcsText(calendarName)}`,
-    `NAME:${escapeIcsText(calendarName)}`,
-    `X-WR-TIMEZONE:${TIMEZONE_ID}`,
-    ...makeTimezoneBlock(),
-    ...events,
-    "END:VCALENDAR",
-  ].join("\r\n");
+  events.push(...makeAuditEvents(auditWeeks, monthIndex, selectedGuardId, exportId, stamp));
+
+  return makeIcsCalendar(calendarName, events);
 }
 
 function downloadTextFile(filename, content) {
@@ -282,6 +346,7 @@ function App() {
   } = useCalendarData();
   const schedule = useMemo(() => buildSchedule(guards, assignments), [guards, assignments]);
   const monthWeeks = useMemo(() => getMonthWeeks(monthIndex), [monthIndex]);
+  const auditWeeks = useMemo(() => buildAuditWeeks(guards, auditAssignments), [guards, auditAssignments]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -316,7 +381,7 @@ function App() {
     const guardName =
       selectedGuardId === "all" ? "Todos" : guards.find((guard) => guard.id === selectedGuardId)?.name ?? "Guardia";
     const calendarName = `Guardias ${guardName} - ${MONTHS[monthIndex]} ${YEAR}`;
-    const content = makeIcs(monthIndex, schedule, selectedGuardId, crypto.randomUUID(), calendarName);
+    const content = makeIcs(monthIndex, schedule, selectedGuardId, crypto.randomUUID(), calendarName, auditWeeks);
     const guardSlug =
       selectedGuardId === "all"
         ? "todos"
@@ -344,7 +409,7 @@ function App() {
       `X-WR-TIMEZONE:${TIMEZONE_ID}`,
       ...makeTimezoneBlock(),
       ...Array.from({ length: 12 }, (_, index) =>
-        makeIcs(index, schedule, selectedGuardId, exportId, calendarName).split("\r\n").filter((line) => {
+        makeIcs(index, schedule, selectedGuardId, exportId, calendarName, auditWeeks).split("\r\n").filter((line) => {
           return ![
             "BEGIN:VCALENDAR",
             "VERSION:2.0",
@@ -375,6 +440,20 @@ function App() {
         : guards.find((guard) => guard.id === selectedGuardId)?.name.toLowerCase().replace(/\s+/g, "-") ??
           "guardia";
     downloadTextFile(`guardias-${guardSlug}-${YEAR}-todo-el-anio.ics`, content);
+  }
+
+  function downloadAudits() {
+    const guardName =
+      selectedGuardId === "all" ? "Todos" : guards.find((guard) => guard.id === selectedGuardId)?.name ?? "Guardia";
+    const calendarName = `Auditorias ${guardName} - ${YEAR}`;
+    const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+    const events = makeAuditEvents(auditWeeks, null, selectedGuardId, crypto.randomUUID(), stamp);
+    const guardSlug =
+      selectedGuardId === "all"
+        ? "todos"
+        : guards.find((guard) => guard.id === selectedGuardId)?.name.toLowerCase().replace(/\s+/g, "-") ??
+          "guardia";
+    downloadTextFile(`auditorias-${guardSlug}-${YEAR}.ics`, makeIcsCalendar(calendarName, events));
   }
 
   if (session === undefined || (session && loading)) {
@@ -547,6 +626,10 @@ function App() {
               <button className="download-button secondary" onClick={downloadAll}>
                 <Download size={18} />
                 Descargar 2026
+              </button>
+              <button className="download-button secondary" onClick={downloadAudits}>
+                <Download size={18} />
+                Auditorias 2026
               </button>
             </div>
           </header>
