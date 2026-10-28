@@ -14,6 +14,7 @@ import "./styles.css";
 import Login from "./Login";
 import { supabase } from "./supabaseClient";
 import { useCalendarData } from "./useCalendarData";
+import { dateKey, getAuditGuard, pad, startOfWorkWeek } from "./auditRotation";
 
 const YEAR = 2026;
 const TIMEZONE_ID = "America/Mexico_City";
@@ -41,13 +42,6 @@ const SHIFT_TEMPLATES = [
   { id: "10-19", label: "10 a 7", start: "10:00", end: "19:00", row: 2 },
 ];
 
-// Rotacion por defecto de auditorias. Cada periodo empieza el lunes indicado y
-// rota semana a semana en el orden dado hasta que empieza el siguiente periodo.
-const AUDIT_ROTATIONS = [
-  { start: new Date(YEAR, 3, 27), order: ["jona", "abi", "chris"] },
-  { start: new Date(YEAR, 10, 2), order: ["abi", "jona", "chris"] },
-];
-
 const HOLIDAYS_2026 = new Set([
   "2026-01-01",
   "2026-02-02",
@@ -63,14 +57,6 @@ const HOLIDAYS_2026 = new Set([
   "2026-12-31",
 ]);
 
-function pad(value) {
-  return String(value).padStart(2, "0");
-}
-
-function dateKey(date) {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
 function dayMarkerClasses(date, monthIndex) {
   if (date.getMonth() !== monthIndex) {
     return "";
@@ -83,60 +69,12 @@ function dayMarkerClasses(date, monthIndex) {
   ].join(" ");
 }
 
-function startOfWorkWeek(date) {
-  const monday = new Date(date);
-  const day = monday.getDay();
-  const offset = day === 0 ? -6 : 1 - day;
-  monday.setDate(monday.getDate() + offset);
-  monday.setHours(0, 0, 0, 0);
-  return monday;
-}
-
 function weekKey(week) {
   return dateKey(startOfWorkWeek(week[0]));
 }
 
-function normalizeName(value) {
-  return String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase();
-}
-
-// Busca a la persona de la rotacion por id y, si no existe (por ejemplo, se agrego
-// desde la app con un id aleatorio), por nombre: "abi" encuentra a "Abi" o "Abien".
-function findRotationGuard(rotationId, guards) {
-  return (
-    guards.find((guard) => guard.id === rotationId) ??
-    guards.find((guard) => normalizeName(guard.name).startsWith(rotationId)) ??
-    null
-  );
-}
-
-function getDefaultAuditGuardForWeek(week, guards) {
-  const weekStart = startOfWorkWeek(week[0]);
-  const rotation = AUDIT_ROTATIONS.filter((period) => startOfWorkWeek(period.start) <= weekStart).at(-1);
-
-  if (!rotation) {
-    return null;
-  }
-
-  const weeksSinceStart = Math.round((weekStart - startOfWorkWeek(rotation.start)) / (7 * 24 * 60 * 60 * 1000));
-  const guardId = rotation.order[weeksSinceStart % rotation.order.length];
-  return findRotationGuard(guardId, guards);
-}
-
 function getAuditGuardForWeek(week, guards, auditAssignments) {
-  const key = weekKey(week);
-
-  // Si la semana tiene un registro en Supabase, ese manda (null = "Sin asignar" explicito).
-  if (Object.prototype.hasOwnProperty.call(auditAssignments, key)) {
-    const assignedGuardId = auditAssignments[key];
-    return assignedGuardId ? guards.find((guard) => guard.id === assignedGuardId) ?? null : null;
-  }
-
-  return getDefaultAuditGuardForWeek(week, guards);
+  return getAuditGuard(week[0], guards, auditAssignments);
 }
 
 function getMonthWeeks(monthIndex) {
