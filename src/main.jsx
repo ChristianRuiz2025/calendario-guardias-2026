@@ -96,6 +96,24 @@ function weekKey(week) {
   return dateKey(startOfWorkWeek(week[0]));
 }
 
+function normalizeName(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+// Busca a la persona de la rotacion por id y, si no existe (por ejemplo, se agrego
+// desde la app con un id aleatorio), por nombre: "abi" encuentra a "Abi" o "Abien".
+function findRotationGuard(rotationId, guards) {
+  return (
+    guards.find((guard) => guard.id === rotationId) ??
+    guards.find((guard) => normalizeName(guard.name).startsWith(rotationId)) ??
+    null
+  );
+}
+
 function getDefaultAuditGuardForWeek(week, guards) {
   const weekStart = startOfWorkWeek(week[0]);
   const rotation = AUDIT_ROTATIONS.filter((period) => startOfWorkWeek(period.start) <= weekStart).at(-1);
@@ -106,7 +124,7 @@ function getDefaultAuditGuardForWeek(week, guards) {
 
   const weeksSinceStart = Math.round((weekStart - startOfWorkWeek(rotation.start)) / (7 * 24 * 60 * 60 * 1000));
   const guardId = rotation.order[weeksSinceStart % rotation.order.length];
-  return guards.find((guard) => guard.id === guardId) ?? null;
+  return findRotationGuard(guardId, guards);
 }
 
 function getAuditGuardForWeek(week, guards, auditAssignments) {
