@@ -187,11 +187,12 @@ export function useCalendarData() {
     }
   }
 
+  // guardId = null guarda la semana como "Sin asignar" (anula la rotacion por defecto).
   function updateAuditAssignment(weekKeyValue, guardId) {
-    setAuditAssignments((current) => ({ ...current, [weekKeyValue]: guardId }));
+    setAuditAssignments((current) => ({ ...current, [weekKeyValue]: guardId ?? null }));
     supabase
       .from("audit_assignments")
-      .upsert({ week_key: weekKeyValue, guard_id: guardId })
+      .upsert({ week_key: weekKeyValue, guard_id: guardId ?? null })
       .then(({ error: upsertError }) => logError(upsertError));
   }
 

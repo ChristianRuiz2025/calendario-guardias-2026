@@ -108,14 +108,15 @@ function getDefaultAuditGuardForWeek(week, guards) {
 }
 
 function getAuditGuardForWeek(week, guards, auditAssignments) {
-  const defaultGuard = getDefaultAuditGuardForWeek(week, guards);
-  const assignedGuardId = auditAssignments[weekKey(week)];
+  const key = weekKey(week);
 
-  if (!defaultGuard && !assignedGuardId) {
-    return null;
+  // Si la semana tiene un registro en Supabase, ese manda (null = "Sin asignar" explicito).
+  if (Object.prototype.hasOwnProperty.call(auditAssignments, key)) {
+    const assignedGuardId = auditAssignments[key];
+    return assignedGuardId ? guards.find((guard) => guard.id === assignedGuardId) ?? null : null;
   }
 
-  return guards.find((guard) => guard.id === assignedGuardId) ?? defaultGuard;
+  return getDefaultAuditGuardForWeek(week, guards);
 }
 
 function getMonthWeeks(monthIndex) {
@@ -688,26 +689,27 @@ function App() {
                       })}
                       <td className="audit-cell">
                         {(() => {
-                          const defaultAuditGuard = getDefaultAuditGuardForWeek(week, guards);
                           const auditGuard = getAuditGuardForWeek(week, guards, auditAssignments);
-                          return auditGuard ? (
+                          return (
                             <select
-                              className="audit-select"
-                              value={auditGuard.id}
-                              onChange={(event) => updateAuditAssignment(weekKey(week), event.target.value)}
-                              style={{ backgroundColor: auditGuard.color }}
-                              title={`Auditorias: ${auditGuard.name}`}
+                              className={["audit-select", auditGuard ? "" : "unassigned"].join(" ")}
+                              value={auditGuard?.id ?? ""}
+                              onChange={(event) => updateAuditAssignment(weekKey(week), event.target.value || null)}
+                              style={{ backgroundColor: auditGuard?.color }}
+                              title={
+                                auditGuard
+                                  ? `Auditorias: ${auditGuard.name}. Click para cambiar.`
+                                  : "Auditorias: sin asignar. Click para elegir."
+                              }
+                              aria-label={`Auditorias semana del ${weekKey(week)}`}
                             >
+                              <option value="">Sin asignar</option>
                               {guards.map((guard) => (
                                 <option key={guard.id} value={guard.id}>
                                   {guard.name}
                                 </option>
                               ))}
                             </select>
-                          ) : defaultAuditGuard ? (
-                            <span className="audit-empty">-</span>
-                          ) : (
-                            <span className="audit-empty">-</span>
                           );
                         })()}
                       </td>

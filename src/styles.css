@@ -490,6 +490,20 @@ p {
   text-align-last: center;
 }
 
+.audit-select {
+  cursor: pointer;
+}
+
+.audit-select.unassigned {
+  background: #a5a5a5;
+  color: #202020;
+}
+
+.audit-select option {
+  background: #ffffff;
+  color: #111111;
+}
+
 .audit-select:focus {
   box-shadow: inset 0 0 0 2px #236996;
 }

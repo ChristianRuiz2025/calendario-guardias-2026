@@ -13,9 +13,10 @@ create table shift_assignments (
   primary key (day_key, guard_id)
 );
 
+-- guard_id null = semana marcada como "Sin asignar"
 create table audit_assignments (
   week_key text primary key,
-  guard_id text not null references guards(id) on delete cascade
+  guard_id text references guards(id) on delete cascade
 );
 
 alter table guards enable row level security;
