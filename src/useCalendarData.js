@@ -18,6 +18,9 @@ export const DEFAULT_SHIFTS = [
 // Dias de oficina por defecto (getDay: 1 = lunes ... 5 = viernes).
 export const DEFAULT_OFFICE_DAYS = [2, 5];
 
+// Dia del mes del cierre MS (si no es dia habil se recorre al siguiente).
+export const DEFAULT_MS_CLOSE_DAY = 6;
+
 // Feriados por defecto, mientras no exista la tabla holidays.
 const DEFAULT_HOLIDAYS = Object.fromEntries(
   [
@@ -93,6 +96,7 @@ export function useCalendarData() {
   const [shifts, setShifts] = useState(DEFAULT_SHIFTS);
   const [holidays, setHolidays] = useState(DEFAULT_HOLIDAYS);
   const [officeDays, setOfficeDays] = useState(DEFAULT_OFFICE_DAYS);
+  const [msCloseDay, setMsCloseDay] = useState(DEFAULT_MS_CLOSE_DAY);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -138,6 +142,10 @@ export function useCalendarData() {
       const officeDaysRow = settingsRes.data?.find((row) => row.key === "office_days");
       if (Array.isArray(officeDaysRow?.value)) {
         setOfficeDays(officeDaysRow.value);
+      }
+      const msCloseDayRow = settingsRes.data?.find((row) => row.key === "ms_close_day");
+      if (Number.isInteger(msCloseDayRow?.value)) {
+        setMsCloseDay(msCloseDayRow.value);
       }
       setLoading(false);
     }
@@ -188,6 +196,9 @@ export function useCalendarData() {
       .on("postgres_changes", { event: "*", schema: "public", table: "app_settings" }, (payload) => {
         if (payload.eventType !== "DELETE" && payload.new.key === "office_days" && Array.isArray(payload.new.value)) {
           setOfficeDays(payload.new.value);
+        }
+        if (payload.eventType !== "DELETE" && payload.new.key === "ms_close_day" && Number.isInteger(payload.new.value)) {
+          setMsCloseDay(payload.new.value);
         }
       })
       .subscribe();
@@ -310,6 +321,14 @@ export function useCalendarData() {
       .then(({ error: upsertError }) => logError(upsertError));
   }
 
+  function updateMsCloseDay(day) {
+    setMsCloseDay(day);
+    supabase
+      .from("app_settings")
+      .upsert({ key: "ms_close_day", value: day })
+      .then(({ error: upsertError }) => logError(upsertError));
+  }
+
   function addHoliday(dayKey, name) {
     setHolidays((current) => ({ ...current, [dayKey]: name }));
     supabase
@@ -347,6 +366,7 @@ export function useCalendarData() {
     shifts,
     holidays,
     officeDays,
+    msCloseDay,
     loading,
     error,
     updateGuard,
@@ -359,6 +379,7 @@ export function useCalendarData() {
     updateShift,
     resetShifts,
     updateOfficeDays,
+    updateMsCloseDay,
     addHoliday,
     removeHoliday,
   };

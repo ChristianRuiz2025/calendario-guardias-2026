@@ -35,15 +35,44 @@ const MONTHS = [
 
 const WEEKDAYS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Auditorias"];
 
-function dayMarkerClasses(date, monthIndex, officeDays) {
+function isWorkingDay(date, holidays) {
+  return date.getDay() >= 1 && date.getDay() <= 5 && !(dateKey(date) in holidays);
+}
+
+// Fechas de cierre del anio:
+// - fin de mes: ultimo dia habil del mes (se recorre hacia atras)
+// - cierre MS: el dia msCloseDay de cada mes, o el siguiente dia habil
+function buildCloseDays(holidays, msCloseDay) {
+  const monthEndDays = new Set();
+  const msCloseDays = new Set();
+
+  for (let month = 0; month < 12; month += 1) {
+    const monthEnd = new Date(YEAR, month + 1, 0);
+    while (!isWorkingDay(monthEnd, holidays)) {
+      monthEnd.setDate(monthEnd.getDate() - 1);
+    }
+    monthEndDays.add(dateKey(monthEnd));
+
+    const msClose = new Date(YEAR, month, Math.min(msCloseDay, monthEnd.getDate()));
+    while (!isWorkingDay(msClose, holidays)) {
+      msClose.setDate(msClose.getDate() + 1);
+    }
+    msCloseDays.add(dateKey(msClose));
+  }
+
+  return { monthEndDays, msCloseDays };
+}
+
+function dayMarkerClasses(date, monthIndex, officeDays, closeDays) {
   if (date.getMonth() !== monthIndex) {
     return "";
   }
 
+  const key = dateKey(date);
   return [
     officeDays.includes(date.getDay()) ? "office-day" : "",
-    date.getDate() === new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate() ? "month-end-day" : "",
-    date.getDate() === 6 ? "ms-close-day" : "",
+    closeDays.monthEndDays.has(key) ? "month-end-day" : "",
+    closeDays.msCloseDays.has(key) ? "ms-close-day" : "",
   ].join(" ");
 }
 
@@ -315,6 +344,7 @@ function App() {
     shifts,
     holidays,
     officeDays,
+    msCloseDay,
     loading,
     error,
     updateGuard,
@@ -327,6 +357,7 @@ function App() {
     updateShift,
     resetShifts,
     updateOfficeDays,
+    updateMsCloseDay,
     addHoliday,
     removeHoliday,
   } = useCalendarData();
@@ -335,6 +366,7 @@ function App() {
     () => buildSchedule(guards, assignments, shifts, holidays),
     [guards, assignments, shifts, holidays]
   );
+  const closeDays = useMemo(() => buildCloseDays(holidays, msCloseDay), [holidays, msCloseDay]);
   const monthWeeks = useMemo(() => getMonthWeeks(monthIndex), [monthIndex]);
   const auditWeeks = useMemo(() => buildAuditWeeks(guards, auditAssignments), [guards, auditAssignments]);
 
@@ -481,6 +513,7 @@ function App() {
             guards={guards}
             shifts={shifts}
             officeDays={officeDays}
+            msCloseDay={msCloseDay}
             holidays={holidays}
             onClose={() => setSettingsOpen(false)}
             onUpdateGuard={updateGuard}
@@ -490,6 +523,7 @@ function App() {
             onUpdateShift={updateShift}
             onResetShifts={resetShifts}
             onUpdateOfficeDays={updateOfficeDays}
+            onUpdateMsCloseDay={updateMsCloseDay}
             onAddHoliday={addHoliday}
             onRemoveHoliday={removeHoliday}
             onResetAssignments={resetAssignments}
@@ -554,7 +588,7 @@ function App() {
                           key={date.toISOString()}
                           className={[
                             date.getMonth() === monthIndex ? "" : "outside",
-                            dayMarkerClasses(date, monthIndex, officeDays),
+                            dayMarkerClasses(date, monthIndex, officeDays, closeDays),
                           ].join(" ")}
                         >
                           <span>{date.getDate()}</span>
@@ -582,7 +616,7 @@ function App() {
                               isOutside ? "outside" : "",
                               isWeekend ? "weekend" : "",
                               isHoliday ? "holiday" : "",
-                              dayMarkerClasses(date, monthIndex, officeDays),
+                              dayMarkerClasses(date, monthIndex, officeDays, closeDays),
                             ].join(" ")}
                           >
                             {!isOutside && !isWeekend && !isHoliday ? (

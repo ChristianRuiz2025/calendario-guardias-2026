@@ -34,6 +34,7 @@ export default function SettingsModal({
   guards,
   shifts,
   officeDays,
+  msCloseDay,
   holidays,
   onClose,
   onUpdateGuard,
@@ -43,6 +44,7 @@ export default function SettingsModal({
   onUpdateShift,
   onResetShifts,
   onUpdateOfficeDays,
+  onUpdateMsCloseDay,
   onAddHoliday,
   onRemoveHoliday,
   onResetAssignments,
@@ -160,6 +162,45 @@ export default function SettingsModal({
                     {day.label}
                   </button>
                 ))}
+              </div>
+            </section>
+
+            <section className="panel">
+              <div className="panel-title">
+                <h2>Cierres</h2>
+              </div>
+              <div className="close-rule">
+                <span className="legend-swatch month-end" aria-hidden="true" />
+                <div>
+                  <strong>Cierre fin de mes</strong>
+                  <p className="settings-hint">
+                    Ultimo dia habil del mes. Si cae en fin de semana o feriado, se recorre hacia atras.
+                  </p>
+                </div>
+              </div>
+              <div className="close-rule">
+                <span className="legend-swatch ms-close" aria-hidden="true" />
+                <div>
+                  <strong>Cierre MS</strong>
+                  <p className="settings-hint">
+                    Dia{" "}
+                    <input
+                      className="close-day-input"
+                      type="number"
+                      min="1"
+                      max="28"
+                      value={msCloseDay}
+                      onChange={(event) => {
+                        const day = Number(event.target.value);
+                        if (Number.isInteger(day) && day >= 1 && day <= 28) {
+                          onUpdateMsCloseDay(day);
+                        }
+                      }}
+                      aria-label="Dia del cierre MS"
+                    />{" "}
+                    de cada mes. Si cae en fin de semana o feriado, se recorre al siguiente dia habil.
+                  </p>
+                </div>
               </div>
             </section>
 

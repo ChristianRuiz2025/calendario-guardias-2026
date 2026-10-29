@@ -845,3 +845,30 @@ p {
   font-weight: 700;
   text-transform: capitalize;
 }
+
+.close-rule {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  margin-top: 12px;
+}
+
+.close-rule .legend-swatch {
+  margin-top: 2px;
+}
+
+.close-rule strong {
+  color: #16212e;
+  font-size: 0.88rem;
+}
+
+.close-day-input {
+  width: 54px;
+  height: 28px;
+  border: 1px solid #cdd8e3;
+  border-radius: 6px;
+  padding: 0 6px;
+  color: #1f3447;
+  font-weight: 700;
+}
