@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { GripVertical, Pencil, Plus, Trash2, X } from "lucide-react";
+import { ChevronRight, GripVertical, Pencil, Plus, Trash2, X } from "lucide-react";
 import { dateKey, findRotationGuard, parseDateKey } from "./auditRotation";
 
 // "2026-11-02" -> "2 de noviembre de 2026"
@@ -27,6 +27,7 @@ export default function AuditRotationEditor({ guards, rotations, onSave, onRemov
   const [form, setForm] = useState(() => emptyForm(guards));
   const [dragIndex, setDragIndex] = useState(null);
   const [formError, setFormError] = useState("");
+  const [listOpen, setListOpen] = useState(false);
 
   const today = dateKey(new Date());
   const sortedRotations = [...rotations].sort((a, b) => a.start.localeCompare(b.start));
@@ -180,10 +181,19 @@ export default function AuditRotationEditor({ guards, rotations, onSave, onRemov
         </div>
       </form>
 
-      <div className="rotation-list">
-        <h3>Ordenes guardados</h3>
-        {sortedRotations.length === 0 ? <p className="settings-hint">No hay ordenes guardados.</p> : null}
-        {sortedRotations.map((rotation) => {
+      <div className={["rotation-list", listOpen ? "open" : ""].join(" ")}>
+        <button
+          type="button"
+          className="holiday-month-toggle"
+          onClick={() => setListOpen((current) => !current)}
+          aria-expanded={listOpen}
+        >
+          <ChevronRight size={16} className="holiday-chevron" aria-hidden="true" />
+          <span>Ordenes guardados</span>
+          <span className="holiday-count">{sortedRotations.length}</span>
+        </button>
+        {listOpen && sortedRotations.length === 0 ? <p className="settings-hint">No hay ordenes guardados.</p> : null}
+        {(listOpen ? sortedRotations : []).map((rotation) => {
           const isActive = rotation.start <= today && (!rotation.end || today <= rotation.end);
           return (
             <div className={["rotation-item", form.id === rotation.id ? "editing" : ""].join(" ")} key={rotation.id}>

@@ -351,11 +351,9 @@ function App() {
     updateGuard,
     addGuard,
     removeGuard,
-    resetGuards,
     updateAssignment,
     updateAuditAssignment,
     updateShift,
-    resetShifts,
     addShift,
     removeShift,
     updateOfficeDays,
@@ -526,9 +524,7 @@ function App() {
             onUpdateGuard={updateGuard}
             onAddGuard={addGuard}
             onRemoveGuard={handleRemoveGuard}
-            onResetGuards={resetGuards}
             onUpdateShift={updateShift}
-            onResetShifts={resetShifts}
             onAddShift={addShift}
             onRemoveShift={removeShift}
             onUpdateOfficeDays={updateOfficeDays}

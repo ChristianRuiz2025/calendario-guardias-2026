@@ -229,7 +229,7 @@ p {
 
 .shift-editor {
   display: grid;
-  grid-template-columns: 54px minmax(0, 1fr) minmax(0, 1fr) 36px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 36px;
   gap: 8px;
   align-items: center;
 }
@@ -891,7 +891,8 @@ p {
   transition: transform 0.15s ease;
 }
 
-.holiday-month.open .holiday-chevron {
+.holiday-month.open .holiday-chevron,
+.rotation-list.open .holiday-chevron {
   transform: rotate(90deg);
 }
 
@@ -1126,14 +1127,18 @@ button.rotation-chip:hover {
 .rotation-list {
   display: grid;
   gap: 8px;
-  padding-top: 12px;
-  border-top: 1px solid #e3ebf2;
+  border: 1px solid #e3ebf2;
+  border-radius: 6px;
+  padding: 0;
 }
 
-.rotation-list h3 {
-  margin: 0;
-  font-size: 0.85rem;
-  color: #16212e;
+.rotation-list.open {
+  padding-bottom: 8px;
+  border-color: #cdd8e3;
+}
+
+.rotation-list .rotation-item {
+  margin: 0 8px;
 }
 
 .rotation-item {
@@ -1174,4 +1179,8 @@ button.rotation-chip:hover {
   background: #dcf3e5;
   font-size: 0.72rem;
   font-weight: 800;
+}
+
+.rotation-list > .settings-hint {
+  margin: 0 10px;
 }

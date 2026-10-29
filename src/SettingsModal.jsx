@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ChevronRight, Plus, RotateCcw, Trash2, X } from "lucide-react";
+import { ChevronRight, Plus, Trash2, X } from "lucide-react";
 import AuditRotationEditor from "./AuditRotationEditor";
 
 const YEAR = 2026;
@@ -71,9 +71,7 @@ export default function SettingsModal({
   onUpdateGuard,
   onAddGuard,
   onRemoveGuard,
-  onResetGuards,
   onUpdateShift,
-  onResetShifts,
   onAddShift,
   onRemoveShift,
   onUpdateOfficeDays,
@@ -128,14 +126,6 @@ export default function SettingsModal({
       window.confirm(`Eliminar el turno ${shiftLabel(shift)}? Los dias que lo tienen asignado quedaran sin guardia.`)
     ) {
       onRemoveShift(shift.id);
-    }
-  }
-
-  function confirmResetShifts() {
-    if (
-      window.confirm("Se regresara a los turnos 8 a 5, 9 a 6 y 10 a 7. Los turnos agregados se eliminaran. Continuar?")
-    ) {
-      onResetShifts();
     }
   }
 
@@ -194,10 +184,6 @@ export default function SettingsModal({
                   </div>
                 ))}
               </div>
-              <button className="reset-button" onClick={onResetGuards}>
-                <RotateCcw size={16} />
-                Reiniciar personas
-              </button>
             </section>
 
             <section className="panel">
@@ -281,14 +267,12 @@ export default function SettingsModal({
                 </button>
               </div>
               <div className="shift-editor shift-editor-head">
-                <span>Turno</span>
                 <span>Entrada</span>
                 <span>Salida</span>
                 <span />
               </div>
               {shifts.map((shift) => (
                 <div key={shift.id} className="shift-editor">
-                  <span>{shiftLabel(shift)}</span>
                   <input
                     type="time"
                     value={shift.start}
@@ -316,10 +300,6 @@ export default function SettingsModal({
                 Se ordenan por hora de entrada. Los cambios aplican a todos los dias que ya tienen ese turno y a los ICS
                 que se descarguen.
               </p>
-              <button className="reset-button" onClick={confirmResetShifts}>
-                <RotateCcw size={16} />
-                Reiniciar turnos
-              </button>
             </section>
 
             <section className="panel">

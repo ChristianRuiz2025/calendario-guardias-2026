@@ -2,12 +2,6 @@ import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 import { DEFAULT_AUDIT_ROTATIONS, rotationFromRow, rotationToRow } from "./auditRotation";
 
-const DEFAULT_GUARDS = [
-  { id: "jona", name: "Jona", initials: "J", color: "#f5b47e" },
-  { id: "chris", name: "Chris", initials: "C", color: "#b77af1" },
-  { id: "abi", name: "Abi", initials: "A", color: "#ffe59a" },
-];
-
 // Turnos por defecto. Los ids se guardan en shift_assignments, asi que no cambian
 // aunque se editen los horarios.
 export const DEFAULT_SHIFTS = [
@@ -268,15 +262,6 @@ export function useCalendarData() {
       .then(({ error: deleteError }) => logError(deleteError));
   }
 
-  async function resetGuards() {
-    setGuards(DEFAULT_GUARDS);
-    const defaultIds = DEFAULT_GUARDS.map((guard) => guard.id);
-    const { error: deleteError } = await supabase.from("guards").delete().not("id", "in", `(${defaultIds.join(",")})`);
-    logError(deleteError);
-    const { error: upsertError } = await supabase.from("guards").upsert(DEFAULT_GUARDS);
-    logError(upsertError);
-  }
-
   function updateAssignment(dayKey, guardId, shiftId) {
     const key = assignmentKey(dayKey, guardId);
     setAssignments((current) => {
@@ -348,24 +333,6 @@ export function useCalendarData() {
     logError(deleteError);
   }
 
-  async function resetShifts() {
-    const defaultIds = DEFAULT_SHIFTS.map((shift) => shift.id);
-    setShifts(DEFAULT_SHIFTS);
-    setAssignments((current) =>
-      Object.fromEntries(Object.entries(current).filter(([, shiftId]) => defaultIds.includes(shiftId)))
-    );
-    const notDefault = `(${defaultIds.map((id) => `"${id}"`).join(",")})`;
-    const { error: assignmentsError } = await supabase
-      .from("shift_assignments")
-      .delete()
-      .not("shift_id", "in", notDefault);
-    logError(assignmentsError);
-    const { error: deleteError } = await supabase.from("shift_templates").delete().not("id", "in", notDefault);
-    logError(deleteError);
-    const { error: upsertError } = await supabase.from("shift_templates").upsert(DEFAULT_SHIFTS.map(shiftToRow));
-    logError(upsertError);
-  }
-
   function updateOfficeDays(days) {
     const next = [...days].sort((a, b) => a - b);
     setOfficeDays(next);
@@ -435,11 +402,9 @@ export function useCalendarData() {
     updateGuard,
     addGuard,
     removeGuard,
-    resetGuards,
     updateAssignment,
     updateAuditAssignment,
     updateShift,
-    resetShifts,
     addShift,
     removeShift,
     updateOfficeDays,
