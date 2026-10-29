@@ -22,22 +22,20 @@ export const DEFAULT_OFFICE_DAYS = [2, 5];
 export const DEFAULT_MS_CLOSE_DAY = 6;
 
 // Feriados por defecto, mientras no exista la tabla holidays.
-const DEFAULT_HOLIDAYS = Object.fromEntries(
-  [
-    "2026-01-01",
-    "2026-02-02",
-    "2026-03-16",
-    "2026-04-02",
-    "2026-04-03",
-    "2026-05-01",
-    "2026-09-16",
-    "2026-11-16",
-    "2026-12-12",
-    "2026-12-24",
-    "2026-12-25",
-    "2026-12-31",
-  ].map((dayKey) => [dayKey, ""])
-);
+const DEFAULT_HOLIDAYS = {
+  "2026-01-01": "Año nuevo",
+  "2026-02-02": "Constitución mexicana",
+  "2026-03-16": "Natalicio de Benito Juárez",
+  "2026-04-02": "Días Santos",
+  "2026-04-03": "Días Santos",
+  "2026-05-01": "Día del trabajo",
+  "2026-09-16": "Independencia de México",
+  "2026-11-16": "Revolución mexicana",
+  "2026-12-12": "Día de la Virgen de Guadalupe",
+  "2026-12-24": "Noche buena",
+  "2026-12-25": "Navidad",
+  "2026-12-31": "Fin de año",
+};
 
 function shiftFromRow(row) {
   return { id: row.id, start: row.start_time, end: row.end_time, position: row.position };
@@ -47,12 +45,16 @@ function shiftToRow(shift) {
   return { id: shift.id, start_time: shift.start, end_time: shift.end, position: shift.position };
 }
 
-// Completa con los turnos por defecto los que no esten en la base (tabla vacia o sin crear).
-function mergeShifts(rows) {
-  return DEFAULT_SHIFTS.map((shift) => {
-    const row = rows.find((item) => item.id === shift.id);
-    return row ? shiftFromRow(row) : shift;
-  });
+// Ordena los turnos por hora de entrada; position es la fila que ocupan en el calendario.
+function sortShifts(shifts) {
+  return [...shifts]
+    .sort((a, b) => a.start.localeCompare(b.start) || a.end.localeCompare(b.end))
+    .map((shift, index) => ({ ...shift, position: index }));
+}
+
+function addHours(time, hours) {
+  const [hour, minute] = time.split(":").map(Number);
+  return `${String(Math.min(hour + hours, 23)).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
 function assignmentKey(dayKey, guardId) {
@@ -130,9 +132,11 @@ export function useCalendarData() {
         )
       );
       setAuditAssignments(Object.fromEntries(auditRes.data.map((row) => [row.week_key, row.guard_id])));
-      // Si la tabla shift_templates aun no existe, se usan los horarios por defecto.
+      // Si la tabla shift_templates aun no existe (o esta vacia), se usan los horarios por defecto.
       logError(shiftTemplatesRes.error);
-      setShifts(mergeShifts(shiftTemplatesRes.data ?? []));
+      if (shiftTemplatesRes.data?.length) {
+        setShifts(sortShifts(shiftTemplatesRes.data.map(shiftFromRow)));
+      }
       // Igual con holidays y app_settings: sin tabla se quedan los valores por defecto.
       logError(holidaysRes.error);
       if (!holidaysRes.error) {
@@ -178,9 +182,10 @@ export function useCalendarData() {
         );
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "shift_templates" }, (payload) => {
-        if (payload.eventType !== "DELETE") {
-          const changed = shiftFromRow(payload.new);
-          setShifts((current) => current.map((shift) => (shift.id === changed.id ? changed : shift)));
+        if (payload.eventType === "DELETE") {
+          setShifts((current) => sortShifts(current.filter((shift) => shift.id !== payload.old.id)));
+        } else {
+          setShifts((current) => sortShifts(upsertById(current, shiftFromRow(payload.new))));
         }
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "holidays" }, (payload) => {
@@ -299,15 +304,48 @@ export function useCalendarData() {
     }
 
     const next = { ...shift, [field]: value };
-    setShifts((current) => current.map((item) => (item.id === id ? next : item)));
+    setShifts((current) => sortShifts(current.map((item) => (item.id === id ? next : item))));
     supabase
       .from("shift_templates")
       .upsert(shiftToRow(next))
       .then(({ error: upsertError }) => logError(upsertError));
   }
 
+  function addShift() {
+    const lastStart = shifts.at(-1)?.start ?? "07:00";
+    const start = addHours(lastStart, 1);
+    const newShift = { id: crypto.randomUUID(), start, end: addHours(start, 9), position: shifts.length };
+    setShifts((current) => sortShifts([...current, newShift]));
+    supabase
+      .from("shift_templates")
+      .insert(shiftToRow(newShift))
+      .then(({ error: insertError }) => logError(insertError));
+  }
+
+  // Elimina el turno y los dias que lo tenian asignado (quedan sin guardia).
+  async function removeShift(id) {
+    setShifts((current) => sortShifts(current.filter((shift) => shift.id !== id)));
+    setAssignments((current) => Object.fromEntries(Object.entries(current).filter(([, shiftId]) => shiftId !== id)));
+    const { error: assignmentsError } = await supabase.from("shift_assignments").delete().eq("shift_id", id);
+    logError(assignmentsError);
+    const { error: deleteError } = await supabase.from("shift_templates").delete().eq("id", id);
+    logError(deleteError);
+  }
+
   async function resetShifts() {
+    const defaultIds = DEFAULT_SHIFTS.map((shift) => shift.id);
     setShifts(DEFAULT_SHIFTS);
+    setAssignments((current) =>
+      Object.fromEntries(Object.entries(current).filter(([, shiftId]) => defaultIds.includes(shiftId)))
+    );
+    const notDefault = `(${defaultIds.map((id) => `"${id}"`).join(",")})`;
+    const { error: assignmentsError } = await supabase
+      .from("shift_assignments")
+      .delete()
+      .not("shift_id", "in", notDefault);
+    logError(assignmentsError);
+    const { error: deleteError } = await supabase.from("shift_templates").delete().not("id", "in", notDefault);
+    logError(deleteError);
     const { error: upsertError } = await supabase.from("shift_templates").upsert(DEFAULT_SHIFTS.map(shiftToRow));
     logError(upsertError);
   }
@@ -378,6 +416,8 @@ export function useCalendarData() {
     resetAssignments,
     updateShift,
     resetShifts,
+    addShift,
+    removeShift,
     updateOfficeDays,
     updateMsCloseDay,
     addHoliday,

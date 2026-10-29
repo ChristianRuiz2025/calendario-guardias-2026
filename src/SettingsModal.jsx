@@ -11,14 +11,38 @@ const WEEKDAY_OPTIONS = [
   { value: 5, label: "Viernes" },
 ];
 
-// "2026-11-16" -> "lun, 16 nov"
-function formatHoliday(dayKey) {
-  const [year, month, day] = dayKey.split("-").map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString("es-MX", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
+const MONTH_NAMES = [
+  "Enero",
+  "Febrero",
+  "Marzo",
+  "Abril",
+  "Mayo",
+  "Junio",
+  "Julio",
+  "Agosto",
+  "Septiembre",
+  "Octubre",
+  "Noviembre",
+  "Diciembre",
+];
+
+const WEEKDAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+
+// Agrupa los feriados por mes: [{ month: "Abril", days: [{ dayKey, day: 2, weekday: "Jueves" }, ...] }]
+function groupHolidaysByMonth(dayKeys) {
+  const groups = [];
+  [...dayKeys].sort().forEach((dayKey) => {
+    const [year, month, day] = dayKey.split("-").map(Number);
+    const label = year === YEAR ? MONTH_NAMES[month - 1] : `${MONTH_NAMES[month - 1]} ${year}`;
+    const weekday = WEEKDAY_NAMES[new Date(year, month - 1, day).getDay()];
+    const group = groups.at(-1);
+    if (group?.month === label) {
+      group.days.push({ dayKey, day, weekday });
+    } else {
+      groups.push({ month: label, days: [{ dayKey, day, weekday }] });
+    }
   });
+  return groups;
 }
 
 // "08:00" + "17:00" -> "8 a 5"
@@ -43,6 +67,8 @@ export default function SettingsModal({
   onResetGuards,
   onUpdateShift,
   onResetShifts,
+  onAddShift,
+  onRemoveShift,
   onUpdateOfficeDays,
   onUpdateMsCloseDay,
   onAddHoliday,
@@ -51,7 +77,7 @@ export default function SettingsModal({
 }) {
   const [newHolidayDate, setNewHolidayDate] = useState("");
   const [newHolidayName, setNewHolidayName] = useState("");
-  const sortedHolidays = Object.keys(holidays).sort();
+  const holidayGroups = groupHolidaysByMonth(Object.keys(holidays));
 
   useEffect(() => {
     function handleKeyDown(event) {
@@ -76,6 +102,22 @@ export default function SettingsModal({
     onAddHoliday(newHolidayDate, newHolidayName.trim());
     setNewHolidayDate("");
     setNewHolidayName("");
+  }
+
+  function confirmRemoveShift(shift) {
+    if (
+      window.confirm(`Eliminar el turno ${shiftLabel(shift)}? Los dias que lo tienen asignado quedaran sin guardia.`)
+    ) {
+      onRemoveShift(shift.id);
+    }
+  }
+
+  function confirmResetShifts() {
+    if (
+      window.confirm("Se regresara a los turnos 8 a 5, 9 a 6 y 10 a 7. Los turnos agregados se eliminaran. Continuar?")
+    ) {
+      onResetShifts();
+    }
   }
 
   function confirmResetAssignments() {
@@ -220,11 +262,15 @@ export default function SettingsModal({
             <section className="panel shift-panel">
               <div className="panel-title">
                 <h2>Turnos</h2>
+                <button className="icon-button" onClick={onAddShift} aria-label="Agregar turno" title="Agregar turno">
+                  <Plus size={18} />
+                </button>
               </div>
               <div className="shift-editor shift-editor-head">
                 <span>Turno</span>
                 <span>Entrada</span>
                 <span>Salida</span>
+                <span />
               </div>
               {shifts.map((shift) => (
                 <div key={shift.id} className="shift-editor">
@@ -241,14 +287,24 @@ export default function SettingsModal({
                     onChange={(event) => onUpdateShift(shift.id, "end", event.target.value)}
                     aria-label={`Salida del turno ${shiftLabel(shift)}`}
                   />
+                  <button
+                    className="icon-button danger"
+                    onClick={() => confirmRemoveShift(shift)}
+                    disabled={shifts.length === 1}
+                    aria-label={`Eliminar turno ${shiftLabel(shift)}`}
+                    title={shifts.length === 1 ? "Debe quedar al menos un turno" : "Eliminar turno"}
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               ))}
               <p className="settings-hint">
-                Los cambios aplican a todos los dias que ya tienen ese turno y a los ICS que se descarguen.
+                Se ordenan por hora de entrada. Los cambios aplican a todos los dias que ya tienen ese turno y a los ICS
+                que se descarguen.
               </p>
-              <button className="reset-button" onClick={onResetShifts}>
+              <button className="reset-button" onClick={confirmResetShifts}>
                 <RotateCcw size={16} />
-                Reiniciar horarios
+                Reiniciar turnos
               </button>
             </section>
 
@@ -278,26 +334,42 @@ export default function SettingsModal({
                 </button>
               </form>
               <div className="holiday-list">
-                {sortedHolidays.length === 0 ? <p className="settings-hint">No hay feriados.</p> : null}
-                {sortedHolidays.map((dayKey) => (
-                  <div className="holiday-row" key={dayKey}>
-                    <span>{formatHoliday(dayKey)}</span>
-                    <input
-                      value={holidays[dayKey]}
-                      onChange={(event) => onAddHoliday(dayKey, event.target.value)}
-                      placeholder="No hay Clases"
-                      aria-label={`Nombre del feriado ${dayKey}`}
-                    />
-                    <button
-                      className="icon-button danger"
-                      onClick={() => onRemoveHoliday(dayKey)}
-                      aria-label={`Eliminar feriado ${dayKey}`}
-                      title="Eliminar feriado"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ))}
+                {holidayGroups.length === 0 ? <p className="settings-hint">No hay feriados.</p> : null}
+                <table className="holiday-table">
+                  <tbody>
+                    {holidayGroups.map((group) =>
+                      group.days.map((holiday, index) => (
+                        <tr key={holiday.dayKey}>
+                          {index === 0 ? (
+                            <th rowSpan={group.days.length} scope="rowgroup">
+                              {group.month}
+                            </th>
+                          ) : null}
+                          <td className="holiday-day">{holiday.day}</td>
+                          <td className="holiday-weekday">{holiday.weekday}</td>
+                          <td>
+                            <input
+                              value={holidays[holiday.dayKey]}
+                              onChange={(event) => onAddHoliday(holiday.dayKey, event.target.value)}
+                              placeholder="No hay Clases"
+                              aria-label={`Nombre del feriado ${holiday.dayKey}`}
+                            />
+                          </td>
+                          <td className="holiday-action">
+                            <button
+                              className="icon-button danger"
+                              onClick={() => onRemoveHoliday(holiday.dayKey)}
+                              aria-label={`Eliminar feriado ${holiday.dayKey}`}
+                              title="Eliminar feriado"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </td>
+                        </tr>
+                      )),
+                    )}
+                  </tbody>
+                </table>
               </div>
             </section>
           </div>

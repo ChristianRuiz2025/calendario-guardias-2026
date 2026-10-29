@@ -229,7 +229,7 @@ p {
 
 .shift-editor {
   display: grid;
-  grid-template-columns: 54px minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: 54px minmax(0, 1fr) minmax(0, 1fr) 36px;
   gap: 8px;
   align-items: center;
 }
@@ -385,6 +385,7 @@ p {
 }
 
 .schedule-row th {
+  height: max(78px, calc(var(--shift-rows, 3) * 24px));
   width: 58px;
   padding-left: 5px;
   color: #003b60;
@@ -395,7 +396,7 @@ p {
 
 .schedule-row td {
   position: relative;
-  height: 78px;
+  height: max(78px, calc(var(--shift-rows, 3) * 24px));
   padding: 0;
   background: #fffdf7;
 }
@@ -410,16 +411,15 @@ p {
 }
 
 .schedule-row .audit-cell {
-  height: 78px;
+  height: max(78px, calc(var(--shift-rows, 3) * 24px));
   padding: 0;
   background: #fffdf7;
 }
 
 .time-stack {
   display: grid;
-  grid-template-rows: repeat(3, 1fr);
   align-items: center;
-  min-height: 78px;
+  height: 100%;
   font-size: 0.78rem;
 }
 
@@ -432,7 +432,6 @@ p {
 .day-columns {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: repeat(3, 1fr);
   gap: 0;
   width: 100%;
   height: 100%;
@@ -539,6 +538,8 @@ p {
   display: grid;
   place-items: center;
   height: 100%;
+  padding: 0 4px;
+  text-align: center;
   color: #16100a;
   font-size: 0.8rem;
   font-weight: 700;
@@ -806,8 +807,7 @@ p {
   border-color: #d92828;
 }
 
-.holiday-form,
-.holiday-row {
+.holiday-form {
   display: grid;
   grid-template-columns: 150px minmax(0, 1fr) 36px;
   gap: 7px;
@@ -830,20 +830,80 @@ p {
 }
 
 .holiday-list {
-  display: grid;
-  gap: 6px;
-  max-height: 320px;
+  max-height: 420px;
   margin-top: 12px;
   padding-top: 10px;
   overflow-y: auto;
   border-top: 1px solid #e3ebf2;
 }
 
-.holiday-row span {
-  color: #40586b;
+.holiday-table {
+  width: 100%;
+  border-collapse: collapse;
   font-size: 0.86rem;
-  font-weight: 700;
-  text-transform: capitalize;
+}
+
+.holiday-table th,
+.holiday-table td {
+  padding: 4px 6px;
+  border-bottom: 1px solid #e3ebf2;
+  vertical-align: middle;
+}
+
+.holiday-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.holiday-table th {
+  width: 92px;
+  color: #16212e;
+  text-align: left;
+  font-weight: 800;
+  border-right: 1px solid #e3ebf2;
+}
+
+.holiday-table .holiday-day {
+  width: 34px;
+  color: #16212e;
+  text-align: right;
+  font-weight: 800;
+}
+
+.holiday-table .holiday-weekday {
+  width: 84px;
+  color: #5c758a;
+}
+
+.holiday-table .holiday-action {
+  width: 40px;
+  padding-right: 0;
+}
+
+.holiday-table input {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0 6px;
+  color: #1f3447;
+  background: transparent;
+}
+
+.holiday-table input:hover,
+.holiday-table input:focus {
+  border-color: #cdd8e3;
+  background: #ffffff;
+}
+
+.holiday-table .icon-button {
+  width: 30px;
+  height: 30px;
+}
+
+.icon-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .close-rule {

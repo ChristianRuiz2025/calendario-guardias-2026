@@ -24,13 +24,43 @@ drop policy if exists "authenticated full access" on public.app_settings;
 create policy "authenticated full access" on public.app_settings
   for all to authenticated using (true) with check (true);
 
--- Feriados iniciales: solo si la tabla esta vacia, para no regresar los que se borren.
-insert into public.holidays (day_key)
-select day_key from (values
-  ('2026-01-01'), ('2026-02-02'), ('2026-03-16'), ('2026-04-02'), ('2026-04-03'), ('2026-05-01'),
-  ('2026-09-16'), ('2026-11-16'), ('2026-12-12'), ('2026-12-24'), ('2026-12-25'), ('2026-12-31')
-) as defaults(day_key)
+-- Feriados iniciales con su nombre.
+-- Solo se insertan si la tabla esta vacia, para no regresar los que se borren, y
+-- solo se pone el nombre a los feriados que aun no tienen uno.
+insert into public.holidays (day_key, name)
+select day_key, name from (values
+  ('2026-01-01', 'Año nuevo'),
+  ('2026-02-02', 'Constitución mexicana'),
+  ('2026-03-16', 'Natalicio de Benito Juárez'),
+  ('2026-04-02', 'Días Santos'),
+  ('2026-04-03', 'Días Santos'),
+  ('2026-05-01', 'Día del trabajo'),
+  ('2026-09-16', 'Independencia de México'),
+  ('2026-11-16', 'Revolución mexicana'),
+  ('2026-12-12', 'Día de la Virgen de Guadalupe'),
+  ('2026-12-24', 'Noche buena'),
+  ('2026-12-25', 'Navidad'),
+  ('2026-12-31', 'Fin de año')
+) as defaults(day_key, name)
 where not exists (select 1 from public.holidays);
+
+update public.holidays h
+set name = defaults.name
+from (values
+  ('2026-01-01', 'Año nuevo'),
+  ('2026-02-02', 'Constitución mexicana'),
+  ('2026-03-16', 'Natalicio de Benito Juárez'),
+  ('2026-04-02', 'Días Santos'),
+  ('2026-04-03', 'Días Santos'),
+  ('2026-05-01', 'Día del trabajo'),
+  ('2026-09-16', 'Independencia de México'),
+  ('2026-11-16', 'Revolución mexicana'),
+  ('2026-12-12', 'Día de la Virgen de Guadalupe'),
+  ('2026-12-24', 'Noche buena'),
+  ('2026-12-25', 'Navidad'),
+  ('2026-12-31', 'Fin de año')
+) as defaults(day_key, name)
+where h.day_key = defaults.day_key and h.name = '';
 
 -- Dias de oficina iniciales: martes y viernes.
 insert into public.app_settings (key, value) values ('office_days', '[2, 5]')

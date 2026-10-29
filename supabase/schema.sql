@@ -68,8 +68,18 @@ insert into shift_templates (id, start_time, end_time, position) values
   ('09-18', '09:00', '18:00', 1),
   ('10-19', '10:00', '19:00', 2);
 
-insert into holidays (day_key) values
-  ('2026-01-01'), ('2026-02-02'), ('2026-03-16'), ('2026-04-02'), ('2026-04-03'), ('2026-05-01'),
-  ('2026-09-16'), ('2026-11-16'), ('2026-12-12'), ('2026-12-24'), ('2026-12-25'), ('2026-12-31');
+insert into holidays (day_key, name) values
+  ('2026-01-01', 'Año nuevo'),
+  ('2026-02-02', 'Constitución mexicana'),
+  ('2026-03-16', 'Natalicio de Benito Juárez'),
+  ('2026-04-02', 'Días Santos'),
+  ('2026-04-03', 'Días Santos'),
+  ('2026-05-01', 'Día del trabajo'),
+  ('2026-09-16', 'Independencia de México'),
+  ('2026-11-16', 'Revolución mexicana'),
+  ('2026-12-12', 'Día de la Virgen de Guadalupe'),
+  ('2026-12-24', 'Noche buena'),
+  ('2026-12-25', 'Navidad'),
+  ('2026-12-31', 'Fin de año');
 
 insert into app_settings (key, value) values ('office_days', '[2, 5]');

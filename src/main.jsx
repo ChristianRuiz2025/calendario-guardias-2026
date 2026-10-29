@@ -356,6 +356,8 @@ function App() {
     resetAssignments,
     updateShift,
     resetShifts,
+    addShift,
+    removeShift,
     updateOfficeDays,
     updateMsCloseDay,
     addHoliday,
@@ -522,6 +524,8 @@ function App() {
             onResetGuards={resetGuards}
             onUpdateShift={updateShift}
             onResetShifts={resetShifts}
+            onAddShift={addShift}
+            onRemoveShift={removeShift}
             onUpdateOfficeDays={updateOfficeDays}
             onUpdateMsCloseDay={updateMsCloseDay}
             onAddHoliday={addHoliday}
@@ -563,7 +567,7 @@ function App() {
           </header>
 
           <div className="calendar-wrap">
-            <table className="guard-calendar">
+            <table className="guard-calendar" style={{ "--shift-rows": shifts.length }}>
               <thead>
                 <tr className="month-row">
                   <th>Entrada</th>
@@ -597,10 +601,12 @@ function App() {
                       <td className="audit-date-cell"></td>
                     </tr>
                     <tr className="schedule-row">
-                      <th className="time-stack">
-                        {shifts.map((shift) => (
-                          <span key={shift.id}>{formatShiftTime(shift.start)}</span>
-                        ))}
+                      <th>
+                        <div className="time-stack" style={{ gridTemplateRows: `repeat(${shifts.length}, 1fr)` }}>
+                          {shifts.map((shift) => (
+                            <span key={shift.id}>{formatShiftTime(shift.start)}</span>
+                          ))}
+                        </div>
                       </th>
                       {week.map((date) => {
                         const key = dateKey(date);
@@ -620,7 +626,7 @@ function App() {
                             ].join(" ")}
                           >
                             {!isOutside && !isWeekend && !isHoliday ? (
-                              <div className="day-columns">
+                              <div className="day-columns" style={{ gridTemplateRows: `repeat(${shifts.length}, 1fr)` }}>
                                 {guards.map((guard, guardIndex) => {
                                   const entry = entries.find((item) => item.guard.id === guard.id);
                                   const currentAssignment =
