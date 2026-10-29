@@ -122,7 +122,7 @@ export default function VacationPanel({ guard, vacationDays, holidays, onAdd, on
             }}
           />
         </label>
-        <button type="submit" className="reset-button" aria-label="Agregar vacaciones">
+        <button type="submit" className="download-button" aria-label="Agregar vacaciones">
           <Plus size={16} />
           Agregar
         </button>

@@ -163,6 +163,34 @@ function buildSchedule(guards, assignments, shifts, holidays, vacations) {
   return schedule;
 }
 
+// Texto negro o blanco segun que tan claro sea el color de fondo ("#b77af1" -> "#111111").
+function contrastText(hexColor) {
+  const match = /^#?([0-9a-f]{6})$/i.exec(hexColor ?? "");
+  if (!match) {
+    return "#ffffff";
+  }
+  const value = parseInt(match[1], 16);
+  const [r, g, b] = [(value >> 16) & 255, (value >> 8) & 255, value & 255];
+  return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? "#111111" : "#ffffff";
+}
+
+// El color de la persona que inicio sesion se vuelve el acento de toda la app.
+function applyAccentColor(color) {
+  const style = document.documentElement.style;
+  if (!color) {
+    ["--accent", "--accent-contrast", "--brand-bg", "--brand-border", "--brand-text"].forEach((name) =>
+      style.removeProperty(name)
+    );
+    return;
+  }
+  const text = contrastText(color);
+  style.setProperty("--accent", color);
+  style.setProperty("--accent-contrast", text);
+  style.setProperty("--brand-bg", color);
+  style.setProperty("--brand-border", "rgba(0, 0, 0, 0.18)");
+  style.setProperty("--brand-text", text);
+}
+
 function escapeIcsText(value) {
   return String(value)
     .replace(/\\/g, "\\\\")
@@ -439,6 +467,10 @@ function App() {
     ? guards.find((guard) => (guard.email ?? "").trim().toLowerCase() === sessionEmail)
     : undefined;
 
+  useEffect(() => {
+    applyAccentColor(currentGuard?.color);
+  }, [currentGuard?.color]);
+
   // Descarga los ICS del mes (guardias y auditorias) de la persona que inicio sesion.
   function downloadMonth() {
     if (!currentGuard) {
@@ -497,7 +529,7 @@ function App() {
             <CalendarDays aria-hidden="true" />
             <div>
               <h1>Guardias 2026</h1>
-              <p>Siclik CESA</p>
+              <p>{currentGuard ? currentGuard.name : "Siclik CESA"}</p>
             </div>
             <div className="brand-actions">
               <button
@@ -600,11 +632,6 @@ function App() {
               </h2>
             </div>
             <div className="toolbar">
-              {currentGuard ? (
-                <span className="session-guard" style={{ backgroundColor: currentGuard.color }}>
-                  {currentGuard.name}
-                </span>
-              ) : null}
               <button
                 className="icon-button"
                 onClick={() => setMonthIndex((monthIndex + 11) % 12)}
@@ -628,7 +655,7 @@ function App() {
                 title={currentGuard ? `Descargar los ICS de ${currentGuard.name}` : "Liga tu correo en Configuracion"}
               >
                 <Download size={18} />
-                {currentGuard ? `Descargar mes de ${currentGuard.name}` : "Descargar mes"}
+                Descargar mes
               </button>
             </div>
           </header>
