@@ -15,6 +15,7 @@ import Login from "./Login";
 import { supabase } from "./supabaseClient";
 import { useCalendarData } from "./useCalendarData";
 import SettingsModal from "./SettingsModal";
+import VacationPanel from "./VacationPanel";
 import { useTheme } from "./useTheme";
 import { dateKey, getAuditGuard, pad, startOfWorkWeek } from "./auditRotation";
 
@@ -125,7 +126,7 @@ function formatShiftTime(time) {
   return time.replace(/^0/, "");
 }
 
-function buildSchedule(guards, assignments, shifts, holidays) {
+function buildSchedule(guards, assignments, shifts, holidays, vacations) {
   const schedule = {};
 
   for (let month = 0; month < 12; month += 1) {
@@ -141,7 +142,11 @@ function buildSchedule(guards, assignments, shifts, holidays) {
         continue;
       }
 
+      // Quien esta de vacaciones ese dia no tiene turno.
       schedule[key] = guards.map((guard) => {
+        if (vacations[assignmentKey(key, guard.id)]) {
+          return null;
+        }
         const assignedShiftId = assignments[assignmentKey(key, guard.id)];
         const shift = shifts.find((item) => item.id === assignedShiftId);
 
@@ -226,6 +231,41 @@ function makeAuditEvents(auditWeeks, monthIndex, selectedGuardId, exportId, stam
         "END:VEVENT",
       ].join("\r\n");
     });
+}
+
+// Un evento de 8:00 a 19:00 por cada dia de vacaciones del mes.
+function makeVacationEvents(vacations, guard, monthIndex, exportId, stamp) {
+  const daysInMonth = new Date(YEAR, monthIndex + 1, 0).getDate();
+  const events = [];
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const date = new Date(YEAR, monthIndex, day);
+    if (!vacations[assignmentKey(dateKey(date), guard.id)]) {
+      continue;
+    }
+
+    events.push(
+      [
+        "BEGIN:VEVENT",
+        `UID:${exportId}-vacaciones-${dateKey(date)}-${guard.id}@guardias-2026`,
+        `DTSTAMP:${stamp}`,
+        `DTSTART;TZID=${TIMEZONE_ID}:${formatIcsDateTime(date, "08:00")}`,
+        `DTEND;TZID=${TIMEZONE_ID}:${formatIcsDateTime(date, "19:00")}`,
+        `SUMMARY:${escapeIcsText(`Vacaciones ${guard.name}`)}`,
+        `DESCRIPTION:${escapeIcsText(`${guard.name} de vacaciones. No disponible de 8:00 a 19:00.`)}`,
+        "CATEGORIES:Vacaciones",
+        "CLASS:PUBLIC",
+        "TRANSP:OPAQUE",
+        "STATUS:CONFIRMED",
+        "X-MICROSOFT-CDO-ALLDAYEVENT:FALSE",
+        "X-MICROSOFT-CDO-BUSYSTATUS:OOF",
+        "X-MICROSOFT-CDO-INTENDEDSTATUS:OOF",
+        "END:VEVENT",
+      ].join("\r\n")
+    );
+  }
+
+  return events;
 }
 
 function makeIcsCalendar(calendarName, events) {
@@ -348,6 +388,7 @@ function App() {
     officeDays,
     msCloseDay,
     auditRotations,
+    vacations,
     loading,
     error,
     updateGuard,
@@ -364,12 +405,14 @@ function App() {
     removeHoliday,
     saveAuditRotation,
     removeAuditRotation,
+    addVacationDays,
+    removeVacationDays,
   } = useCalendarData();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const schedule = useMemo(
-    () => buildSchedule(guards, assignments, shifts, holidays),
-    [guards, assignments, shifts, holidays]
+    () => buildSchedule(guards, assignments, shifts, holidays, vacations),
+    [guards, assignments, shifts, holidays, vacations]
   );
   const closeDays = useMemo(() => buildCloseDays(holidays, msCloseDay), [holidays, msCloseDay]);
   const monthWeeks = useMemo(() => getMonthWeeks(monthIndex), [monthIndex]);
@@ -409,14 +452,21 @@ function App() {
     downloadTextFile(`guardias-${fileSuffix}`, content);
 
     const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+    // Las descargas extra van con una pausa para que el navegador no las descarte.
+    const extraFiles = [];
     const auditEvents = makeAuditEvents(auditWeeks, monthIndex, currentGuard.id, crypto.randomUUID(), stamp);
     if (auditEvents.length > 0) {
       const auditCalendarName = `Auditorias ${guardName} - ${MONTHS[monthIndex]} ${YEAR}`;
-      // Pequena pausa para que el navegador no descarte la segunda descarga.
-      setTimeout(() => {
-        downloadTextFile(`auditorias-${fileSuffix}`, makeIcsCalendar(auditCalendarName, auditEvents));
-      }, 300);
+      extraFiles.push([`auditorias-${fileSuffix}`, makeIcsCalendar(auditCalendarName, auditEvents)]);
     }
+    const vacationEvents = makeVacationEvents(vacations, currentGuard, monthIndex, crypto.randomUUID(), stamp);
+    if (vacationEvents.length > 0) {
+      const vacationCalendarName = `Vacaciones ${guardName} - ${MONTHS[monthIndex]} ${YEAR}`;
+      extraFiles.push([`vacaciones-${fileSuffix}`, makeIcsCalendar(vacationCalendarName, vacationEvents)]);
+    }
+    extraFiles.forEach(([filename, fileContent], index) => {
+      setTimeout(() => downloadTextFile(filename, fileContent), 300 * (index + 1));
+    });
   }
 
   if (session === undefined || (session && loading)) {
@@ -493,6 +543,18 @@ function App() {
               ))}
             </div>
           </div>
+
+          {currentGuard ? (
+            <VacationPanel
+              guard={currentGuard}
+              vacationDays={Object.keys(vacations)
+                .filter((key) => key.endsWith(`|${currentGuard.id}`))
+                .map((key) => key.split("|")[0])}
+              holidays={holidays}
+              onAdd={addVacationDays}
+              onRemove={removeVacationDays}
+            />
+          ) : null}
 
           {currentGuard ? null : (
             <div className="panel export-panel">
@@ -633,6 +695,19 @@ function App() {
                             {!isOutside && !isWeekend && !isHoliday ? (
                               <div className="day-columns" style={{ gridTemplateRows: `repeat(${shifts.length}, 1fr)` }}>
                                 {guards.map((guard, guardIndex) => {
+                                  if (vacations[assignmentKey(key, guard.id)]) {
+                                    return (
+                                      <div
+                                        key={guard.id}
+                                        className="assignment-column vacation-column"
+                                        style={{ "--guard-color": guard.color, gridColumn: guardIndex + 1, gridRow: "1 / -1" }}
+                                        title={`${guard.name}: de vacaciones, no disponible.`}
+                                      >
+                                        <span className="vacation-initial">{guard.initials}</span>
+                                      </div>
+                                    );
+                                  }
+
                                   const entry = entries.find((item) => item.guard.id === guard.id);
                                   const currentAssignment =
                                     assignments[assignmentKey(key, guard.id)] ?? entry?.id ?? "";

@@ -95,6 +95,8 @@ export function useCalendarData() {
   const [officeDays, setOfficeDays] = useState(DEFAULT_OFFICE_DAYS);
   const [msCloseDay, setMsCloseDay] = useState(DEFAULT_MS_CLOSE_DAY);
   const [auditRotations, setAuditRotations] = useState(DEFAULT_AUDIT_ROTATIONS);
+  // Dias de vacaciones: { "YYYY-MM-DD|guardId": true }
+  const [vacations, setVacations] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -102,7 +104,7 @@ export function useCalendarData() {
     let active = true;
 
     async function load() {
-      const [guardsRes, shiftsRes, auditRes, shiftTemplatesRes, holidaysRes, settingsRes, rotationsRes] =
+      const [guardsRes, shiftsRes, auditRes, shiftTemplatesRes, holidaysRes, settingsRes, rotationsRes, vacationsRes] =
         await Promise.all([
           supabase.from("guards").select("*").order("created_at"),
           supabase.from("shift_assignments").select("*"),
@@ -111,6 +113,7 @@ export function useCalendarData() {
           supabase.from("holidays").select("*"),
           supabase.from("app_settings").select("*"),
           supabase.from("audit_rotations").select("*"),
+          supabase.from("vacations").select("*"),
         ]);
 
       if (!active) {
@@ -154,6 +157,11 @@ export function useCalendarData() {
       if (!rotationsRes.error) {
         setAuditRotations(rotationsRes.data.map(rotationFromRow));
       }
+      // Sin tabla vacations simplemente no hay vacaciones.
+      logError(vacationsRes.error);
+      setVacations(
+        Object.fromEntries((vacationsRes.data ?? []).map((row) => [assignmentKey(row.day_key, row.guard_id), true]))
+      );
       setLoading(false);
     }
 
@@ -215,6 +223,16 @@ export function useCalendarData() {
         } else {
           setAuditRotations((current) => upsertById(current, rotationFromRow(payload.new)));
         }
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "vacations" }, (payload) => {
+        setVacations((current) =>
+          applyMapChange(
+            current,
+            payload,
+            (row) => assignmentKey(row.day_key, row.guard_id),
+            () => true
+          )
+        );
       })
       .subscribe();
 
@@ -371,6 +389,31 @@ export function useCalendarData() {
       .then(({ error: deleteError }) => logError(deleteError));
   }
 
+  function addVacationDays(guardId, dayKeys) {
+    if (dayKeys.length === 0) {
+      return;
+    }
+    setVacations((current) => ({
+      ...current,
+      ...Object.fromEntries(dayKeys.map((dayKey) => [assignmentKey(dayKey, guardId), true])),
+    }));
+    supabase
+      .from("vacations")
+      .upsert(dayKeys.map((dayKey) => ({ day_key: dayKey, guard_id: guardId })))
+      .then(({ error: upsertError }) => logError(upsertError));
+  }
+
+  function removeVacationDays(guardId, dayKeys) {
+    const keys = new Set(dayKeys.map((dayKey) => assignmentKey(dayKey, guardId)));
+    setVacations((current) => Object.fromEntries(Object.entries(current).filter(([key]) => !keys.has(key))));
+    supabase
+      .from("vacations")
+      .delete()
+      .eq("guard_id", guardId)
+      .in("day_key", dayKeys)
+      .then(({ error: deleteError }) => logError(deleteError));
+  }
+
   function saveAuditRotation(rotation) {
     setAuditRotations((current) => upsertById(current, rotation));
     supabase
@@ -397,6 +440,7 @@ export function useCalendarData() {
     officeDays,
     msCloseDay,
     auditRotations,
+    vacations,
     loading,
     error,
     updateGuard,
@@ -413,5 +457,7 @@ export function useCalendarData() {
     removeHoliday,
     saveAuditRotation,
     removeAuditRotation,
+    addVacationDays,
+    removeVacationDays,
   };
 }

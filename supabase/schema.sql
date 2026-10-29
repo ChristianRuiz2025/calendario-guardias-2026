@@ -37,6 +37,12 @@ create table app_settings (
   value jsonb not null
 );
 
+create table vacations (
+  day_key text not null,
+  guard_id text not null references guards(id) on delete cascade,
+  primary key (day_key, guard_id)
+);
+
 create table audit_rotations (
   id text primary key,
   start_date text not null,
@@ -51,6 +57,7 @@ alter table shift_templates enable row level security;
 alter table holidays enable row level security;
 alter table app_settings enable row level security;
 alter table audit_rotations enable row level security;
+alter table vacations enable row level security;
 
 create policy "authenticated full access" on guards
   for all to authenticated using (true) with check (true);
@@ -66,8 +73,10 @@ create policy "authenticated full access" on app_settings
   for all to authenticated using (true) with check (true);
 create policy "authenticated full access" on audit_rotations
   for all to authenticated using (true) with check (true);
+create policy "authenticated full access" on vacations
+  for all to authenticated using (true) with check (true);
 
-alter publication supabase_realtime add table guards, shift_assignments, audit_assignments, shift_templates, holidays, app_settings, audit_rotations;
+alter publication supabase_realtime add table guards, shift_assignments, audit_assignments, shift_templates, holidays, app_settings, audit_rotations, vacations;
 
 insert into guards (id, name, initials, color) values
   ('jona', 'Jona', 'J', '#f5b47e'),
