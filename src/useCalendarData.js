@@ -7,6 +7,30 @@ const DEFAULT_GUARDS = [
   { id: "abi", name: "Abi", initials: "A", color: "#ffe59a" },
 ];
 
+// Turnos por defecto. Los ids se guardan en shift_assignments, asi que no cambian
+// aunque se editen los horarios.
+export const DEFAULT_SHIFTS = [
+  { id: "08-17", start: "08:00", end: "17:00", position: 0 },
+  { id: "09-18", start: "09:00", end: "18:00", position: 1 },
+  { id: "10-19", start: "10:00", end: "19:00", position: 2 },
+];
+
+function shiftFromRow(row) {
+  return { id: row.id, start: row.start_time, end: row.end_time, position: row.position };
+}
+
+function shiftToRow(shift) {
+  return { id: shift.id, start_time: shift.start, end_time: shift.end, position: shift.position };
+}
+
+// Completa con los turnos por defecto los que no esten en la base (tabla vacia o sin crear).
+function mergeShifts(rows) {
+  return DEFAULT_SHIFTS.map((shift) => {
+    const row = rows.find((item) => item.id === shift.id);
+    return row ? shiftFromRow(row) : shift;
+  });
+}
+
 function assignmentKey(dayKey, guardId) {
   return `${dayKey}|${guardId}`;
 }
@@ -45,6 +69,7 @@ export function useCalendarData() {
   const [guards, setGuards] = useState([]);
   const [assignments, setAssignments] = useState({});
   const [auditAssignments, setAuditAssignments] = useState({});
+  const [shifts, setShifts] = useState(DEFAULT_SHIFTS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -52,10 +77,11 @@ export function useCalendarData() {
     let active = true;
 
     async function load() {
-      const [guardsRes, shiftsRes, auditRes] = await Promise.all([
+      const [guardsRes, shiftsRes, auditRes, shiftTemplatesRes] = await Promise.all([
         supabase.from("guards").select("*").order("created_at"),
         supabase.from("shift_assignments").select("*"),
         supabase.from("audit_assignments").select("*"),
+        supabase.from("shift_templates").select("*"),
       ]);
 
       if (!active) {
@@ -75,6 +101,9 @@ export function useCalendarData() {
         )
       );
       setAuditAssignments(Object.fromEntries(auditRes.data.map((row) => [row.week_key, row.guard_id])));
+      // Si la tabla shift_templates aun no existe, se usan los horarios por defecto.
+      logError(shiftTemplatesRes.error);
+      setShifts(mergeShifts(shiftTemplatesRes.data ?? []));
       setLoading(false);
     }
 
@@ -104,6 +133,12 @@ export function useCalendarData() {
             (row) => row.guard_id
           )
         );
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "shift_templates" }, (payload) => {
+        if (payload.eventType !== "DELETE") {
+          const changed = shiftFromRow(payload.new);
+          setShifts((current) => current.map((shift) => (shift.id === changed.id ? changed : shift)));
+        }
       })
       .subscribe();
 
@@ -196,6 +231,26 @@ export function useCalendarData() {
       .then(({ error: upsertError }) => logError(upsertError));
   }
 
+  function updateShift(id, field, value) {
+    const shift = shifts.find((item) => item.id === id);
+    if (!shift || !value) {
+      return;
+    }
+
+    const next = { ...shift, [field]: value };
+    setShifts((current) => current.map((item) => (item.id === id ? next : item)));
+    supabase
+      .from("shift_templates")
+      .upsert(shiftToRow(next))
+      .then(({ error: upsertError }) => logError(upsertError));
+  }
+
+  async function resetShifts() {
+    setShifts(DEFAULT_SHIFTS);
+    const { error: upsertError } = await supabase.from("shift_templates").upsert(DEFAULT_SHIFTS.map(shiftToRow));
+    logError(upsertError);
+  }
+
   async function resetAssignments() {
     setAssignments({});
     setAuditAssignments({});
@@ -209,6 +264,7 @@ export function useCalendarData() {
     guards,
     assignments,
     auditAssignments,
+    shifts,
     loading,
     error,
     updateGuard,
@@ -218,5 +274,7 @@ export function useCalendarData() {
     updateAssignment,
     updateAuditAssignment,
     resetAssignments,
+    updateShift,
+    resetShifts,
   };
 }

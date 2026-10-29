@@ -6,14 +6,13 @@ import {
   ChevronRight,
   Download,
   LogOut,
-  Plus,
-  RotateCcw,
-  Trash2,
+  Settings,
 } from "lucide-react";
 import "./styles.css";
 import Login from "./Login";
 import { supabase } from "./supabaseClient";
 import { useCalendarData } from "./useCalendarData";
+import SettingsModal from "./SettingsModal";
 import { dateKey, getAuditGuard, pad, startOfWorkWeek } from "./auditRotation";
 
 const YEAR = 2026;
@@ -35,12 +34,6 @@ const MONTHS = [
 ];
 
 const WEEKDAYS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Auditorias"];
-
-const SHIFT_TEMPLATES = [
-  { id: "08-17", label: "8 a 5", start: "08:00", end: "17:00", row: 0 },
-  { id: "09-18", label: "9 a 6", start: "09:00", end: "18:00", row: 1 },
-  { id: "10-19", label: "10 a 7", start: "10:00", end: "19:00", row: 2 },
-];
 
 const HOLIDAYS_2026 = new Set([
   "2026-01-01",
@@ -101,18 +94,21 @@ function assignmentKey(dayKey, guardId) {
   return `${dayKey}|${guardId}`;
 }
 
-function nextShiftId(currentShiftId) {
+function nextShiftId(currentShiftId, shifts) {
   if (!currentShiftId) {
-    return SHIFT_TEMPLATES[0].id;
+    return shifts[0].id;
   }
 
-  const currentIndex = SHIFT_TEMPLATES.findIndex((shift) => shift.id === currentShiftId);
-  return currentIndex >= 0 && currentIndex < SHIFT_TEMPLATES.length - 1
-    ? SHIFT_TEMPLATES[currentIndex + 1].id
-    : "";
+  const currentIndex = shifts.findIndex((shift) => shift.id === currentShiftId);
+  return currentIndex >= 0 && currentIndex < shifts.length - 1 ? shifts[currentIndex + 1].id : "";
 }
 
-function buildSchedule(guards, assignments) {
+// "08:00" -> "8:00"
+function formatShiftTime(time) {
+  return time.replace(/^0/, "");
+}
+
+function buildSchedule(guards, assignments, shifts) {
   const schedule = {};
 
   for (let month = 0; month < 12; month += 1) {
@@ -130,7 +126,7 @@ function buildSchedule(guards, assignments) {
 
       schedule[key] = guards.map((guard) => {
         const assignedShiftId = assignments[assignmentKey(key, guard.id)];
-        const shift = SHIFT_TEMPLATES.find((item) => item.id === assignedShiftId);
+        const shift = shifts.find((item) => item.id === assignedShiftId);
 
         return shift
           ? {
@@ -331,6 +327,7 @@ function App() {
     guards,
     assignments,
     auditAssignments,
+    shifts,
     loading,
     error,
     updateGuard,
@@ -340,8 +337,11 @@ function App() {
     updateAssignment,
     updateAuditAssignment,
     resetAssignments,
+    updateShift,
+    resetShifts,
   } = useCalendarData();
-  const schedule = useMemo(() => buildSchedule(guards, assignments), [guards, assignments]);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const schedule = useMemo(() => buildSchedule(guards, assignments, shifts), [guards, assignments, shifts]);
   const monthWeeks = useMemo(() => getMonthWeeks(monthIndex), [monthIndex]);
   const auditWeeks = useMemo(() => buildAuditWeeks(guards, auditAssignments), [guards, auditAssignments]);
 
@@ -364,7 +364,7 @@ function App() {
   }, [monthIndex, schedule, selectedGuardId]);
 
   function cycleAssignment(dayKey, guardId, currentShiftId) {
-    updateAssignment(dayKey, guardId, nextShiftId(currentShiftId));
+    updateAssignment(dayKey, guardId, nextShiftId(currentShiftId, shifts));
   }
 
   function handleRemoveGuard(id) {
@@ -428,15 +428,24 @@ function App() {
               <h1>Guardias 2026</h1>
               <p>Outlook fuera de oficina</p>
             </div>
-            <button
-              className="icon-button"
-              onClick={() => supabase.auth.signOut()}
-              aria-label="Cerrar sesion"
-              title="Cerrar sesion"
-              style={{ marginLeft: "auto" }}
-            >
-              <LogOut size={18} />
-            </button>
+            <div className="brand-actions">
+              <button
+                className="icon-button"
+                onClick={() => setSettingsOpen(true)}
+                aria-label="Configuracion"
+                title="Configuracion"
+              >
+                <Settings size={18} />
+              </button>
+              <button
+                className="icon-button"
+                onClick={() => supabase.auth.signOut()}
+                aria-label="Cerrar sesion"
+                title="Cerrar sesion"
+              >
+                <LogOut size={18} />
+              </button>
+            </div>
           </div>
 
           <div className="panel">
@@ -456,68 +465,6 @@ function App() {
             </div>
           </div>
 
-          <div className="panel">
-            <div className="panel-title">
-              <h2>Guardias</h2>
-              <button className="icon-button" onClick={addGuard} aria-label="Agregar guardia" title="Agregar guardia">
-                <Plus size={18} />
-              </button>
-            </div>
-            <div className="guard-list">
-              {guards.map((guard) => (
-                <div className="guard-row" key={guard.id}>
-                  <input
-                    className="swatch"
-                    type="color"
-                    value={guard.color}
-                    onChange={(event) => updateGuard(guard.id, "color", event.target.value)}
-                    aria-label={`Color de ${guard.name}`}
-                  />
-                  <input
-                    value={guard.initials}
-                    onChange={(event) => updateGuard(guard.id, "initials", event.target.value)}
-                    aria-label={`Iniciales de ${guard.name}`}
-                  />
-                  <input
-                    value={guard.name}
-                    onChange={(event) => updateGuard(guard.id, "name", event.target.value)}
-                    aria-label={`Nombre de ${guard.name}`}
-                  />
-                  <button
-                    className="icon-button danger"
-                    onClick={() => handleRemoveGuard(guard.id)}
-                    aria-label={`Eliminar ${guard.name}`}
-                    title="Eliminar guardia"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <button className="reset-button" onClick={resetGuards}>
-              <RotateCcw size={16} />
-              Reiniciar personas
-            </button>
-          </div>
-
-          <div className="panel shift-panel">
-            <div className="panel-title">
-              <h2>Turnos fijos</h2>
-            </div>
-            {SHIFT_TEMPLATES.map((shift) => (
-              <div key={shift.id} className="shift-line">
-                <span>{shift.label}</span>
-                <strong>
-                  {shift.start} - {shift.end}
-                </strong>
-              </div>
-            ))}
-            <button className="reset-button" onClick={resetAssignments}>
-              <RotateCcw size={16} />
-              Reiniciar asignaciones
-            </button>
-          </div>
-
           <div className="panel export-panel">
             <h2>Exportar ICS</h2>
             <label htmlFor="guard-export">Citas para</label>
@@ -535,6 +482,21 @@ function App() {
             </select>
           </div>
         </aside>
+
+        {settingsOpen ? (
+          <SettingsModal
+            guards={guards}
+            shifts={shifts}
+            onClose={() => setSettingsOpen(false)}
+            onUpdateGuard={updateGuard}
+            onAddGuard={addGuard}
+            onRemoveGuard={handleRemoveGuard}
+            onResetGuards={resetGuards}
+            onUpdateShift={updateShift}
+            onResetShifts={resetShifts}
+            onResetAssignments={resetAssignments}
+          />
+        ) : null}
 
         <section className="calendar-area">
           <header className="topbar">
@@ -604,9 +566,9 @@ function App() {
                     </tr>
                     <tr className="schedule-row">
                       <th className="time-stack">
-                        <span>8:00</span>
-                        <span>9:00</span>
-                        <span>10:00</span>
+                        {shifts.map((shift) => (
+                          <span key={shift.id}>{formatShiftTime(shift.start)}</span>
+                        ))}
                       </th>
                       {week.map((date) => {
                         const key = dateKey(date);
@@ -631,9 +593,9 @@ function App() {
                                   const entry = entries.find((item) => item.guard.id === guard.id);
                                   const currentAssignment =
                                     assignments[assignmentKey(key, guard.id)] ?? entry?.id ?? "";
-                                  const selectedShift = SHIFT_TEMPLATES.find((item) => item.id === currentAssignment);
-                                  const span = selectedShift ? 3 - selectedShift.row : 3;
-                                  const rowStart = selectedShift ? selectedShift.row + 1 : 1;
+                                  const selectedShift = shifts.find((item) => item.id === currentAssignment);
+                                  const span = selectedShift ? shifts.length - selectedShift.position : shifts.length;
+                                  const rowStart = selectedShift ? selectedShift.position + 1 : 1;
 
                                   return (
                                     <button
