@@ -494,22 +494,15 @@ function App() {
             </div>
           </div>
 
-          <div className="panel export-panel">
-            <h2>Tu calendario</h2>
-            {currentGuard ? (
-              <>
-                <span className="session-guard" style={{ backgroundColor: currentGuard.color }}>
-                  {currentGuard.name}
-                </span>
-                <p className="settings-hint">"Descargar mes" baja tus guardias y auditorias del mes.</p>
-              </>
-            ) : (
+          {currentGuard ? null : (
+            <div className="panel export-panel">
+              <h2>Tu calendario</h2>
               <p className="settings-hint">
                 Tu correo ({session.user.email}) no esta ligado a ninguna persona. Agregalo en Configuracion, en
                 Guardias, para descargar tus ICS.
               </p>
-            )}
-          </div>
+            </div>
+          )}
         </aside>
 
         {settingsOpen ? (
@@ -539,7 +532,14 @@ function App() {
         <section className="calendar-area">
           <header className="topbar">
             <div>
-              <p className="eyebrow">Calendario anual</p>
+              <div className="topbar-eyebrow">
+                <p className="eyebrow">Calendario anual</p>
+                {currentGuard ? (
+                  <span className="session-guard" style={{ backgroundColor: currentGuard.color }}>
+                    {currentGuard.name}
+                  </span>
+                ) : null}
+              </div>
               <h2>
                 {MONTHS[monthIndex]} {YEAR}
               </h2>
