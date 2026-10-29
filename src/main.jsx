@@ -339,7 +339,6 @@ function App() {
     const today = new Date();
     return today.getFullYear() === YEAR ? today.getMonth() : 0;
   });
-  const [selectedGuardId, setSelectedGuardId] = useState("all");
   const {
     guards,
     assignments,
@@ -391,28 +390,26 @@ function App() {
     updateAssignment(dayKey, guardId, nextShiftId(currentShiftId, shifts));
   }
 
-  function handleRemoveGuard(id) {
-    removeGuard(id);
-    if (selectedGuardId === id) {
-      setSelectedGuardId("all");
-    }
-  }
+  // La persona que inicio sesion, ligada por el correo que tiene en Configuracion > Guardias.
+  const sessionEmail = session?.user?.email?.trim().toLowerCase() ?? "";
+  const currentGuard = sessionEmail
+    ? guards.find((guard) => (guard.email ?? "").trim().toLowerCase() === sessionEmail)
+    : undefined;
 
+  // Descarga los ICS del mes (guardias y auditorias) de la persona que inicio sesion.
   function downloadMonth() {
-    const guardName =
-      selectedGuardId === "all" ? "Todos" : guards.find((guard) => guard.id === selectedGuardId)?.name ?? "Guardia";
+    if (!currentGuard) {
+      return;
+    }
+    const guardName = currentGuard.name;
     const calendarName = `Guardias ${guardName} - ${MONTHS[monthIndex]} ${YEAR}`;
-    const content = makeIcs(monthIndex, schedule, selectedGuardId, crypto.randomUUID(), calendarName);
-    const guardSlug =
-      selectedGuardId === "all"
-        ? "todos"
-        : guards.find((guard) => guard.id === selectedGuardId)?.name.toLowerCase().replace(/\s+/g, "-") ??
-          "guardia";
+    const content = makeIcs(monthIndex, schedule, currentGuard.id, crypto.randomUUID(), calendarName);
+    const guardSlug = guardName.toLowerCase().replace(/\s+/g, "-");
     const fileSuffix = `${guardSlug}-${YEAR}-${pad(monthIndex + 1)}-${MONTHS[monthIndex].toLowerCase()}.ics`;
     downloadTextFile(`guardias-${fileSuffix}`, content);
 
     const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-    const auditEvents = makeAuditEvents(auditWeeks, monthIndex, selectedGuardId, crypto.randomUUID(), stamp);
+    const auditEvents = makeAuditEvents(auditWeeks, monthIndex, currentGuard.id, crypto.randomUUID(), stamp);
     if (auditEvents.length > 0) {
       const auditCalendarName = `Auditorias ${guardName} - ${MONTHS[monthIndex]} ${YEAR}`;
       // Pequena pausa para que el navegador no descarte la segunda descarga.
@@ -498,20 +495,20 @@ function App() {
           </div>
 
           <div className="panel export-panel">
-            <h2>Exportar ICS</h2>
-            <label htmlFor="guard-export">Citas para</label>
-            <select
-              id="guard-export"
-              value={selectedGuardId}
-              onChange={(event) => setSelectedGuardId(event.target.value)}
-            >
-              <option value="all">Todos los guardias</option>
-              {guards.map((guard) => (
-                <option key={guard.id} value={guard.id}>
-                  {guard.name}
-                </option>
-              ))}
-            </select>
+            <h2>Tu calendario</h2>
+            {currentGuard ? (
+              <>
+                <span className="session-guard" style={{ backgroundColor: currentGuard.color }}>
+                  {currentGuard.name}
+                </span>
+                <p className="settings-hint">"Descargar mes" baja tus guardias y auditorias del mes.</p>
+              </>
+            ) : (
+              <p className="settings-hint">
+                Tu correo ({session.user.email}) no esta ligado a ninguna persona. Agregalo en Configuracion, en
+                Guardias, para descargar tus ICS.
+              </p>
+            )}
           </div>
         </aside>
 
@@ -525,7 +522,7 @@ function App() {
             onClose={() => setSettingsOpen(false)}
             onUpdateGuard={updateGuard}
             onAddGuard={addGuard}
-            onRemoveGuard={handleRemoveGuard}
+            onRemoveGuard={removeGuard}
             onUpdateShift={updateShift}
             onAddShift={addShift}
             onRemoveShift={removeShift}
@@ -564,9 +561,14 @@ function App() {
               >
                 <ChevronRight size={20} />
               </button>
-              <button className="download-button" onClick={downloadMonth}>
+              <button
+                className="download-button"
+                onClick={downloadMonth}
+                disabled={!currentGuard}
+                title={currentGuard ? `Descargar los ICS de ${currentGuard.name}` : "Liga tu correo en Configuracion"}
+              >
                 <Download size={18} />
-                Descargar mes
+                {currentGuard ? `Descargar mes de ${currentGuard.name}` : "Descargar mes"}
               </button>
             </div>
           </header>

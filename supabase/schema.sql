@@ -3,6 +3,7 @@ create table guards (
   name text not null,
   initials text not null,
   color text not null,
+  email text,
   created_at timestamptz not null default now()
 );
 

@@ -153,6 +153,7 @@ export default function SettingsModal({
                   <Plus size={18} />
                 </button>
               </div>
+              <p className="settings-hint">El correo liga a cada persona con su inicio de sesion para descargar sus ICS.</p>
               <div className="guard-list">
                 {guards.map((guard) => (
                   <div className="guard-row" key={guard.id}>
@@ -172,6 +173,13 @@ export default function SettingsModal({
                       value={guard.name}
                       onChange={(event) => onUpdateGuard(guard.id, "name", event.target.value)}
                       aria-label={`Nombre de ${guard.name}`}
+                    />
+                    <input
+                      type="email"
+                      value={guard.email ?? ""}
+                      onChange={(event) => onUpdateGuard(guard.id, "email", event.target.value.trim())}
+                      placeholder="Correo"
+                      aria-label={`Correo de ${guard.name}`}
                     />
                     <button
                       className="icon-button danger"
