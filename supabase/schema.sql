@@ -36,12 +36,20 @@ create table app_settings (
   value jsonb not null
 );
 
+create table audit_rotations (
+  id text primary key,
+  start_date text not null,
+  end_date text,
+  guard_ids jsonb not null default '[]'
+);
+
 alter table guards enable row level security;
 alter table shift_assignments enable row level security;
 alter table audit_assignments enable row level security;
 alter table shift_templates enable row level security;
 alter table holidays enable row level security;
 alter table app_settings enable row level security;
+alter table audit_rotations enable row level security;
 
 create policy "authenticated full access" on guards
   for all to authenticated using (true) with check (true);
@@ -55,8 +63,10 @@ create policy "authenticated full access" on holidays
   for all to authenticated using (true) with check (true);
 create policy "authenticated full access" on app_settings
   for all to authenticated using (true) with check (true);
+create policy "authenticated full access" on audit_rotations
+  for all to authenticated using (true) with check (true);
 
-alter publication supabase_realtime add table guards, shift_assignments, audit_assignments, shift_templates, holidays, app_settings;
+alter publication supabase_realtime add table guards, shift_assignments, audit_assignments, shift_templates, holidays, app_settings, audit_rotations;
 
 insert into guards (id, name, initials, color) values
   ('jona', 'Jona', 'J', '#f5b47e'),
@@ -83,3 +93,7 @@ insert into holidays (day_key, name) values
   ('2026-12-31', 'Fin de año');
 
 insert into app_settings (key, value) values ('office_days', '[2, 5]');
+
+insert into audit_rotations (id, start_date, end_date, guard_ids) values
+  ('2026-04-27', '2026-04-27', '2026-11-01', '["jona", "abi", "chris"]'),
+  ('2026-11-02', '2026-11-02', null, '["abi", "jona", "chris"]');

@@ -11,7 +11,13 @@
 
 import { timingSafeEqual } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
-import { dateKey, getAuditGuard, startOfWorkWeek } from "../src/auditRotation.js";
+import {
+  DEFAULT_AUDIT_ROTATIONS,
+  dateKey,
+  getAuditGuard,
+  rotationFromRow,
+  startOfWorkWeek,
+} from "../src/auditRotation.js";
 
 const TIMEZONE_ID = "America/Mexico_City";
 const DEFAULT_WEEKS = 4;
@@ -72,9 +78,10 @@ export default async function handler(req, res) {
     { auth: { persistSession: false } }
   );
 
-  const [guardsRes, auditRes] = await Promise.all([
+  const [guardsRes, auditRes, rotationsRes] = await Promise.all([
     supabase.from("guards").select("id, name").order("created_at"),
     supabase.from("audit_assignments").select("week_key, guard_id"),
+    supabase.from("audit_rotations").select("*"),
   ]);
 
   if (guardsRes.error || auditRes.error) {
@@ -84,6 +91,11 @@ export default async function handler(req, res) {
 
   const guards = guardsRes.data;
   const auditAssignments = Object.fromEntries(auditRes.data.map((row) => [row.week_key, row.guard_id]));
+  // Sin tabla audit_rotations se usa el orden por defecto, igual que en la app.
+  if (rotationsRes.error) {
+    console.error(rotationsRes.error);
+  }
+  const rotations = rotationsRes.error ? DEFAULT_AUDIT_ROTATIONS : rotationsRes.data.map(rotationFromRow);
   const firstMonday = startOfWorkWeek(from);
 
   const result = Array.from({ length: weeks }, (_, index) => {
@@ -93,7 +105,7 @@ export default async function handler(req, res) {
     friday.setDate(monday.getDate() + 4);
 
     const key = dateKey(monday);
-    const guard = getAuditGuard(monday, guards, auditAssignments);
+    const guard = getAuditGuard(monday, guards, auditAssignments, rotations);
 
     return {
       semana: key,

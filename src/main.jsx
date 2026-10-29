@@ -80,8 +80,8 @@ function weekKey(week) {
   return dateKey(startOfWorkWeek(week[0]));
 }
 
-function getAuditGuardForWeek(week, guards, auditAssignments) {
-  return getAuditGuard(week[0], guards, auditAssignments);
+function getAuditGuardForWeek(week, guards, auditAssignments, auditRotations) {
+  return getAuditGuard(week[0], guards, auditAssignments, auditRotations);
 }
 
 function getMonthWeeks(monthIndex) {
@@ -173,7 +173,7 @@ function formatIcsDate(date) {
 }
 
 // Semanas (lunes) del anio con la persona de auditorias que les toca.
-function buildAuditWeeks(guards, auditAssignments) {
+function buildAuditWeeks(guards, auditAssignments, auditRotations) {
   const weeks = [];
   const monday = startOfWorkWeek(new Date(YEAR, 0, 1));
   if (monday.getFullYear() < YEAR) {
@@ -181,7 +181,7 @@ function buildAuditWeeks(guards, auditAssignments) {
   }
 
   while (monday.getFullYear() === YEAR) {
-    const guard = getAuditGuard(monday, guards, auditAssignments);
+    const guard = getAuditGuard(monday, guards, auditAssignments, auditRotations);
     if (guard) {
       weeks.push({ monday: new Date(monday), guard });
     }
@@ -345,6 +345,7 @@ function App() {
     holidays,
     officeDays,
     msCloseDay,
+    auditRotations,
     loading,
     error,
     updateGuard,
@@ -353,7 +354,6 @@ function App() {
     resetGuards,
     updateAssignment,
     updateAuditAssignment,
-    resetAssignments,
     updateShift,
     resetShifts,
     addShift,
@@ -362,6 +362,8 @@ function App() {
     updateMsCloseDay,
     addHoliday,
     removeHoliday,
+    saveAuditRotation,
+    removeAuditRotation,
   } = useCalendarData();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const schedule = useMemo(
@@ -370,7 +372,10 @@ function App() {
   );
   const closeDays = useMemo(() => buildCloseDays(holidays, msCloseDay), [holidays, msCloseDay]);
   const monthWeeks = useMemo(() => getMonthWeeks(monthIndex), [monthIndex]);
-  const auditWeeks = useMemo(() => buildAuditWeeks(guards, auditAssignments), [guards, auditAssignments]);
+  const auditWeeks = useMemo(
+    () => buildAuditWeeks(guards, auditAssignments, auditRotations),
+    [guards, auditAssignments, auditRotations]
+  );
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -530,7 +535,9 @@ function App() {
             onUpdateMsCloseDay={updateMsCloseDay}
             onAddHoliday={addHoliday}
             onRemoveHoliday={removeHoliday}
-            onResetAssignments={resetAssignments}
+            auditRotations={auditRotations}
+            onSaveAuditRotation={saveAuditRotation}
+            onRemoveAuditRotation={removeAuditRotation}
           />
         ) : null}
 
@@ -668,7 +675,7 @@ function App() {
                       })}
                       <td className="audit-cell">
                         {(() => {
-                          const auditGuard = getAuditGuardForWeek(week, guards, auditAssignments);
+                          const auditGuard = getAuditGuardForWeek(week, guards, auditAssignments, auditRotations);
                           return (
                             <select
                               className={["audit-select", auditGuard ? "" : "unassigned"].join(" ")}

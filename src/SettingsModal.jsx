@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ChevronRight, Plus, RotateCcw, Trash2, X } from "lucide-react";
+import AuditRotationEditor from "./AuditRotationEditor";
 
 const YEAR = 2026;
 
@@ -79,7 +80,9 @@ export default function SettingsModal({
   onUpdateMsCloseDay,
   onAddHoliday,
   onRemoveHoliday,
-  onResetAssignments,
+  auditRotations,
+  onSaveAuditRotation,
+  onRemoveAuditRotation,
 }) {
   const [newHolidayDate, setNewHolidayDate] = useState("");
   const [newHolidayName, setNewHolidayName] = useState("");
@@ -133,12 +136,6 @@ export default function SettingsModal({
       window.confirm("Se regresara a los turnos 8 a 5, 9 a 6 y 10 a 7. Los turnos agregados se eliminaran. Continuar?")
     ) {
       onResetShifts();
-    }
-  }
-
-  function confirmResetAssignments() {
-    if (window.confirm("Se borraran todos los turnos y auditorias asignados en el calendario. Continuar?")) {
-      onResetAssignments();
     }
   }
 
@@ -264,13 +261,14 @@ export default function SettingsModal({
 
             <section className="panel">
               <div className="panel-title">
-                <h2>Asignaciones</h2>
+                <h2>Orden automatico de auditorias</h2>
               </div>
-              <p className="settings-hint">Borra los turnos y auditorias elegidos a mano en todo el calendario.</p>
-              <button className="reset-button danger" onClick={confirmResetAssignments}>
-                <RotateCcw size={16} />
-                Reiniciar asignaciones
-              </button>
+              <AuditRotationEditor
+                guards={guards}
+                rotations={auditRotations}
+                onSave={onSaveAuditRotation}
+                onRemove={onRemoveAuditRotation}
+              />
             </section>
           </div>
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
+import { DEFAULT_AUDIT_ROTATIONS, rotationFromRow, rotationToRow } from "./auditRotation";
 
 const DEFAULT_GUARDS = [
   { id: "jona", name: "Jona", initials: "J", color: "#f5b47e" },
@@ -99,6 +100,7 @@ export function useCalendarData() {
   const [holidays, setHolidays] = useState(DEFAULT_HOLIDAYS);
   const [officeDays, setOfficeDays] = useState(DEFAULT_OFFICE_DAYS);
   const [msCloseDay, setMsCloseDay] = useState(DEFAULT_MS_CLOSE_DAY);
+  const [auditRotations, setAuditRotations] = useState(DEFAULT_AUDIT_ROTATIONS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -106,14 +108,16 @@ export function useCalendarData() {
     let active = true;
 
     async function load() {
-      const [guardsRes, shiftsRes, auditRes, shiftTemplatesRes, holidaysRes, settingsRes] = await Promise.all([
-        supabase.from("guards").select("*").order("created_at"),
-        supabase.from("shift_assignments").select("*"),
-        supabase.from("audit_assignments").select("*"),
-        supabase.from("shift_templates").select("*"),
-        supabase.from("holidays").select("*"),
-        supabase.from("app_settings").select("*"),
-      ]);
+      const [guardsRes, shiftsRes, auditRes, shiftTemplatesRes, holidaysRes, settingsRes, rotationsRes] =
+        await Promise.all([
+          supabase.from("guards").select("*").order("created_at"),
+          supabase.from("shift_assignments").select("*"),
+          supabase.from("audit_assignments").select("*"),
+          supabase.from("shift_templates").select("*"),
+          supabase.from("holidays").select("*"),
+          supabase.from("app_settings").select("*"),
+          supabase.from("audit_rotations").select("*"),
+        ]);
 
       if (!active) {
         return;
@@ -150,6 +154,11 @@ export function useCalendarData() {
       const msCloseDayRow = settingsRes.data?.find((row) => row.key === "ms_close_day");
       if (Number.isInteger(msCloseDayRow?.value)) {
         setMsCloseDay(msCloseDayRow.value);
+      }
+      // Sin tabla audit_rotations se usa el orden por defecto.
+      logError(rotationsRes.error);
+      if (!rotationsRes.error) {
+        setAuditRotations(rotationsRes.data.map(rotationFromRow));
       }
       setLoading(false);
     }
@@ -204,6 +213,13 @@ export function useCalendarData() {
         }
         if (payload.eventType !== "DELETE" && payload.new.key === "ms_close_day" && Number.isInteger(payload.new.value)) {
           setMsCloseDay(payload.new.value);
+        }
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "audit_rotations" }, (payload) => {
+        if (payload.eventType === "DELETE") {
+          setAuditRotations((current) => current.filter((rotation) => rotation.id !== payload.old.id));
+        } else {
+          setAuditRotations((current) => upsertById(current, rotationFromRow(payload.new)));
         }
       })
       .subscribe();
@@ -388,13 +404,21 @@ export function useCalendarData() {
       .then(({ error: deleteError }) => logError(deleteError));
   }
 
-  async function resetAssignments() {
-    setAssignments({});
-    setAuditAssignments({});
-    const { error: shiftsError } = await supabase.from("shift_assignments").delete().not("day_key", "is", null);
-    logError(shiftsError);
-    const { error: auditError } = await supabase.from("audit_assignments").delete().not("week_key", "is", null);
-    logError(auditError);
+  function saveAuditRotation(rotation) {
+    setAuditRotations((current) => upsertById(current, rotation));
+    supabase
+      .from("audit_rotations")
+      .upsert(rotationToRow(rotation))
+      .then(({ error: upsertError }) => logError(upsertError));
+  }
+
+  function removeAuditRotation(id) {
+    setAuditRotations((current) => current.filter((rotation) => rotation.id !== id));
+    supabase
+      .from("audit_rotations")
+      .delete()
+      .eq("id", id)
+      .then(({ error: deleteError }) => logError(deleteError));
   }
 
   return {
@@ -405,6 +429,7 @@ export function useCalendarData() {
     holidays,
     officeDays,
     msCloseDay,
+    auditRotations,
     loading,
     error,
     updateGuard,
@@ -413,7 +438,6 @@ export function useCalendarData() {
     resetGuards,
     updateAssignment,
     updateAuditAssignment,
-    resetAssignments,
     updateShift,
     resetShifts,
     addShift,
@@ -422,5 +446,7 @@ export function useCalendarData() {
     updateMsCloseDay,
     addHoliday,
     removeHoliday,
+    saveAuditRotation,
+    removeAuditRotation,
   };
 }
