@@ -532,19 +532,17 @@ function App() {
         <section className="calendar-area">
           <header className="topbar">
             <div>
-              <div className="topbar-eyebrow">
-                <p className="eyebrow">Calendario anual</p>
-                {currentGuard ? (
-                  <span className="session-guard" style={{ backgroundColor: currentGuard.color }}>
-                    {currentGuard.name}
-                  </span>
-                ) : null}
-              </div>
+              <p className="eyebrow">Calendario anual</p>
               <h2>
                 {MONTHS[monthIndex]} {YEAR}
               </h2>
             </div>
             <div className="toolbar">
+              {currentGuard ? (
+                <span className="session-guard" style={{ backgroundColor: currentGuard.color }}>
+                  {currentGuard.name}
+                </span>
+              ) : null}
               <button
                 className="icon-button"
                 onClick={() => setMonthIndex((monthIndex + 11) % 12)}

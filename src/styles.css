@@ -287,18 +287,12 @@ p {
   background: var(--accent-soft);
 }
 
-.topbar-eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
 .session-guard {
+  margin-right: 16px;
   border: 1px solid rgba(0, 0, 0, 0.18);
   border-radius: 999px;
-  padding: 2px 12px;
+  padding: 6px 16px;
   color: #111111;
-  font-size: 0.85rem;
   font-weight: 800;
 }
 
