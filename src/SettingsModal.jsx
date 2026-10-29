@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Plus, RotateCcw, Trash2, X } from "lucide-react";
+import { ChevronRight, Plus, RotateCcw, Trash2, X } from "lucide-react";
 
 const YEAR = 2026;
 
@@ -28,12 +28,18 @@ const MONTH_NAMES = [
 
 const WEEKDAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
+// "2026-04-02" -> "Abril" (con el anio si no es el del calendario)
+function monthLabel(dayKey) {
+  const [year, month] = dayKey.split("-").map(Number);
+  return year === YEAR ? MONTH_NAMES[month - 1] : `${MONTH_NAMES[month - 1]} ${year}`;
+}
+
 // Agrupa los feriados por mes: [{ month: "Abril", days: [{ dayKey, day: 2, weekday: "Jueves" }, ...] }]
 function groupHolidaysByMonth(dayKeys) {
   const groups = [];
   [...dayKeys].sort().forEach((dayKey) => {
     const [year, month, day] = dayKey.split("-").map(Number);
-    const label = year === YEAR ? MONTH_NAMES[month - 1] : `${MONTH_NAMES[month - 1]} ${year}`;
+    const label = monthLabel(dayKey);
     const weekday = WEEKDAY_NAMES[new Date(year, month - 1, day).getDay()];
     const group = groups.at(-1);
     if (group?.month === label) {
@@ -78,6 +84,13 @@ export default function SettingsModal({
   const [newHolidayDate, setNewHolidayDate] = useState("");
   const [newHolidayName, setNewHolidayName] = useState("");
   const holidayGroups = groupHolidaysByMonth(Object.keys(holidays));
+  const [openMonths, setOpenMonths] = useState([]);
+
+  function toggleMonth(month) {
+    setOpenMonths((current) =>
+      current.includes(month) ? current.filter((item) => item !== month) : [...current, month],
+    );
+  }
 
   useEffect(() => {
     function handleKeyDown(event) {
@@ -100,6 +113,9 @@ export default function SettingsModal({
       return;
     }
     onAddHoliday(newHolidayDate, newHolidayName.trim());
+    // Abre el mes del feriado nuevo para que se vea en la lista.
+    const month = monthLabel(newHolidayDate);
+    setOpenMonths((current) => (current.includes(month) ? current : [...current, month]));
     setNewHolidayDate("");
     setNewHolidayName("");
   }
@@ -335,41 +351,55 @@ export default function SettingsModal({
               </form>
               <div className="holiday-list">
                 {holidayGroups.length === 0 ? <p className="settings-hint">No hay feriados.</p> : null}
-                <table className="holiday-table">
-                  <tbody>
-                    {holidayGroups.map((group) =>
-                      group.days.map((holiday, index) => (
-                        <tr key={holiday.dayKey}>
-                          {index === 0 ? (
-                            <th rowSpan={group.days.length} scope="rowgroup">
-                              {group.month}
-                            </th>
-                          ) : null}
-                          <td className="holiday-day">{holiday.day}</td>
-                          <td className="holiday-weekday">{holiday.weekday}</td>
-                          <td>
-                            <input
-                              value={holidays[holiday.dayKey]}
-                              onChange={(event) => onAddHoliday(holiday.dayKey, event.target.value)}
-                              placeholder="No hay Clases"
-                              aria-label={`Nombre del feriado ${holiday.dayKey}`}
-                            />
-                          </td>
-                          <td className="holiday-action">
-                            <button
-                              className="icon-button danger"
-                              onClick={() => onRemoveHoliday(holiday.dayKey)}
-                              aria-label={`Eliminar feriado ${holiday.dayKey}`}
-                              title="Eliminar feriado"
-                            >
-                              <Trash2 size={15} />
-                            </button>
-                          </td>
-                        </tr>
-                      )),
-                    )}
-                  </tbody>
-                </table>
+                {holidayGroups.map((group) => {
+                  const isOpen = openMonths.includes(group.month);
+                  return (
+                    <div className={["holiday-month", isOpen ? "open" : ""].join(" ")} key={group.month}>
+                      <button
+                        type="button"
+                        className="holiday-month-toggle"
+                        onClick={() => toggleMonth(group.month)}
+                        aria-expanded={isOpen}
+                      >
+                        <ChevronRight size={16} className="holiday-chevron" aria-hidden="true" />
+                        <span>{group.month}</span>
+                        <span className="holiday-count">
+                          {group.days.length} {group.days.length === 1 ? "dia" : "dias"}
+                        </span>
+                      </button>
+                      {isOpen ? (
+                        <table className="holiday-table">
+                          <tbody>
+                            {group.days.map((holiday) => (
+                              <tr key={holiday.dayKey}>
+                                <td className="holiday-day">{holiday.day}</td>
+                                <td className="holiday-weekday">{holiday.weekday}</td>
+                                <td>
+                                  <input
+                                    value={holidays[holiday.dayKey]}
+                                    onChange={(event) => onAddHoliday(holiday.dayKey, event.target.value)}
+                                    placeholder="No hay Clases"
+                                    aria-label={`Nombre del feriado ${holiday.dayKey}`}
+                                  />
+                                </td>
+                                <td className="holiday-action">
+                                  <button
+                                    className="icon-button danger"
+                                    onClick={() => onRemoveHoliday(holiday.dayKey)}
+                                    aria-label={`Eliminar feriado ${holiday.dayKey}`}
+                                    title="Eliminar feriado"
+                                  >
+                                    <Trash2 size={15} />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      ) : null}
+                    </div>
+                  );
+                })}
               </div>
             </section>
           </div>
