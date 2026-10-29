@@ -431,8 +431,8 @@ p {
 
 .day-columns {
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(3, 1fr);
   gap: 0;
   width: 100%;
   height: 100%;
@@ -452,20 +452,6 @@ p {
   line-height: 1;
   text-transform: uppercase;
   outline: 0;
-}
-
-.assignment-column {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-}
-
-.assignment-time {
-  font-size: 0.62rem;
-  font-weight: 800;
-  opacity: 0.75;
 }
 
 /* Dibuja el borde de dia de oficina / fin de mes / cierre MS encima de los turnos. */

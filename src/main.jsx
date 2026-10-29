@@ -632,6 +632,8 @@ function App() {
                                   const currentAssignment =
                                     assignments[assignmentKey(key, guard.id)] ?? entry?.id ?? "";
                                   const selectedShift = SHIFT_TEMPLATES.find((item) => item.id === currentAssignment);
+                                  const span = selectedShift ? 3 - selectedShift.row : 3;
+                                  const rowStart = selectedShift ? selectedShift.row + 1 : 1;
 
                                   return (
                                     <button
@@ -645,6 +647,7 @@ function App() {
                                       style={{
                                         backgroundColor: selectedShift ? guard.color : undefined,
                                         gridColumn: guardIndex + 1,
+                                        gridRow: `${rowStart} / span ${span}`,
                                       }}
                                       title={
                                         selectedShift
@@ -652,10 +655,7 @@ function App() {
                                           : `${guard.name}: Sin guardia. Click para cambiar.`
                                       }
                                     >
-                                      <span>{guard.initials}</span>
-                                      {selectedShift ? (
-                                        <span className="assignment-time">{selectedShift.start.replace(/^0/, "")}</span>
-                                      ) : null}
+                                      {guard.initials}
                                     </button>
                                   );
                                 })}
