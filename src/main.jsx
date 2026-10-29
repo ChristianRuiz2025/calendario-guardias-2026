@@ -182,12 +182,12 @@ function buildAuditWeeks(guards, auditAssignments) {
 }
 
 // Un evento de todo el dia de lunes a viernes por cada semana de auditorias.
-// Cada semana cuenta en el mes de su lunes, asi no se repite en el paquete anual.
+// Cada semana cuenta en el mes de su lunes.
 function makeAuditEvents(auditWeeks, monthIndex, selectedGuardId, exportId, stamp) {
   return auditWeeks
     .filter(({ monday, guard }) => {
       return (
-        (monthIndex === null || monday.getMonth() === monthIndex) &&
+        monday.getMonth() === monthIndex &&
         (selectedGuardId === "all" || guard.id === selectedGuardId)
       );
     })
@@ -250,8 +250,7 @@ function makeIcs(
   schedule,
   selectedGuardId = "all",
   exportId = crypto.randomUUID(),
-  calendarName = `Guardias ${MONTHS[monthIndex]} ${YEAR}`,
-  auditWeeks = []
+  calendarName = `Guardias ${MONTHS[monthIndex]} ${YEAR}`
 ) {
   const events = [];
   const daysInMonth = new Date(YEAR, monthIndex + 1, 0).getDate();
@@ -304,8 +303,6 @@ function makeIcs(
       });
     });
   }
-
-  events.push(...makeAuditEvents(auditWeeks, monthIndex, selectedGuardId, exportId, stamp));
 
   return makeIcsCalendar(calendarName, events);
 }
@@ -381,79 +378,24 @@ function App() {
     const guardName =
       selectedGuardId === "all" ? "Todos" : guards.find((guard) => guard.id === selectedGuardId)?.name ?? "Guardia";
     const calendarName = `Guardias ${guardName} - ${MONTHS[monthIndex]} ${YEAR}`;
-    const content = makeIcs(monthIndex, schedule, selectedGuardId, crypto.randomUUID(), calendarName, auditWeeks);
+    const content = makeIcs(monthIndex, schedule, selectedGuardId, crypto.randomUUID(), calendarName);
     const guardSlug =
       selectedGuardId === "all"
         ? "todos"
         : guards.find((guard) => guard.id === selectedGuardId)?.name.toLowerCase().replace(/\s+/g, "-") ??
           "guardia";
-    downloadTextFile(
-      `guardias-${guardSlug}-${YEAR}-${pad(monthIndex + 1)}-${MONTHS[monthIndex].toLowerCase()}.ics`,
-      content
-    );
-  }
+    const fileSuffix = `${guardSlug}-${YEAR}-${pad(monthIndex + 1)}-${MONTHS[monthIndex].toLowerCase()}.ics`;
+    downloadTextFile(`guardias-${fileSuffix}`, content);
 
-  function downloadAll() {
-    const exportId = crypto.randomUUID();
-    const guardName =
-      selectedGuardId === "all" ? "Todos" : guards.find((guard) => guard.id === selectedGuardId)?.name ?? "Guardia";
-    const calendarName = `Guardias ${guardName} - ${YEAR}`;
-    const content = [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//Calendario Guardias 2026//ES",
-      "CALSCALE:GREGORIAN",
-      "METHOD:PUBLISH",
-      `X-WR-CALNAME:${escapeIcsText(calendarName)}`,
-      `NAME:${escapeIcsText(calendarName)}`,
-      `X-WR-TIMEZONE:${TIMEZONE_ID}`,
-      ...makeTimezoneBlock(),
-      ...Array.from({ length: 12 }, (_, index) =>
-        makeIcs(index, schedule, selectedGuardId, exportId, calendarName, auditWeeks).split("\r\n").filter((line) => {
-          return ![
-            "BEGIN:VCALENDAR",
-            "VERSION:2.0",
-            "PRODID:-//Calendario Guardias 2026//ES",
-            "CALSCALE:GREGORIAN",
-            "METHOD:PUBLISH",
-            `X-WR-CALNAME:${escapeIcsText(calendarName)}`,
-            `NAME:${escapeIcsText(calendarName)}`,
-            `X-WR-TIMEZONE:${TIMEZONE_ID}`,
-            "BEGIN:VTIMEZONE",
-            `TZID:${TIMEZONE_ID}`,
-            "BEGIN:STANDARD",
-            "DTSTART:19700101T000000",
-            "TZOFFSETFROM:-0600",
-            "TZOFFSETTO:-0600",
-            "TZNAME:CST",
-            "END:STANDARD",
-            "END:VTIMEZONE",
-            "END:VCALENDAR",
-          ].includes(line);
-        })
-      ).flat(),
-      "END:VCALENDAR",
-    ].join("\r\n");
-    const guardSlug =
-      selectedGuardId === "all"
-        ? "todos"
-        : guards.find((guard) => guard.id === selectedGuardId)?.name.toLowerCase().replace(/\s+/g, "-") ??
-          "guardia";
-    downloadTextFile(`guardias-${guardSlug}-${YEAR}-todo-el-anio.ics`, content);
-  }
-
-  function downloadAudits() {
-    const guardName =
-      selectedGuardId === "all" ? "Todos" : guards.find((guard) => guard.id === selectedGuardId)?.name ?? "Guardia";
-    const calendarName = `Auditorias ${guardName} - ${YEAR}`;
     const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-    const events = makeAuditEvents(auditWeeks, null, selectedGuardId, crypto.randomUUID(), stamp);
-    const guardSlug =
-      selectedGuardId === "all"
-        ? "todos"
-        : guards.find((guard) => guard.id === selectedGuardId)?.name.toLowerCase().replace(/\s+/g, "-") ??
-          "guardia";
-    downloadTextFile(`auditorias-${guardSlug}-${YEAR}.ics`, makeIcsCalendar(calendarName, events));
+    const auditEvents = makeAuditEvents(auditWeeks, monthIndex, selectedGuardId, crypto.randomUUID(), stamp);
+    if (auditEvents.length > 0) {
+      const auditCalendarName = `Auditorias ${guardName} - ${MONTHS[monthIndex]} ${YEAR}`;
+      // Pequena pausa para que el navegador no descarte la segunda descarga.
+      setTimeout(() => {
+        downloadTextFile(`auditorias-${fileSuffix}`, makeIcsCalendar(auditCalendarName, auditEvents));
+      }, 300);
+    }
   }
 
   if (session === undefined || (session && loading)) {
@@ -623,14 +565,6 @@ function App() {
                 <Download size={18} />
                 Descargar mes
               </button>
-              <button className="download-button secondary" onClick={downloadAll}>
-                <Download size={18} />
-                Descargar 2026
-              </button>
-              <button className="download-button secondary" onClick={downloadAudits}>
-                <Download size={18} />
-                Auditorias 2026
-              </button>
             </div>
           </header>
 
@@ -698,8 +632,6 @@ function App() {
                                   const currentAssignment =
                                     assignments[assignmentKey(key, guard.id)] ?? entry?.id ?? "";
                                   const selectedShift = SHIFT_TEMPLATES.find((item) => item.id === currentAssignment);
-                                  const span = selectedShift ? 3 - selectedShift.row : 3;
-                                  const rowStart = selectedShift ? selectedShift.row + 1 : 1;
 
                                   return (
                                     <button
@@ -713,7 +645,6 @@ function App() {
                                       style={{
                                         backgroundColor: selectedShift ? guard.color : undefined,
                                         gridColumn: guardIndex + 1,
-                                        gridRow: `${rowStart} / span ${span}`,
                                       }}
                                       title={
                                         selectedShift
@@ -721,7 +652,10 @@ function App() {
                                           : `${guard.name}: Sin guardia. Click para cambiar.`
                                       }
                                     >
-                                      {guard.initials}
+                                      <span>{guard.initials}</span>
+                                      {selectedShift ? (
+                                        <span className="assignment-time">{selectedShift.start.replace(/^0/, "")}</span>
+                                      ) : null}
                                     </button>
                                   );
                                 })}
