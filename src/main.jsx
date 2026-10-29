@@ -35,28 +35,13 @@ const MONTHS = [
 
 const WEEKDAYS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Auditorias"];
 
-const HOLIDAYS_2026 = new Set([
-  "2026-01-01",
-  "2026-02-02",
-  "2026-03-16",
-  "2026-04-02",
-  "2026-04-03",
-  "2026-05-01",
-  "2026-09-16",
-  "2026-11-16",
-  "2026-12-12",
-  "2026-12-24",
-  "2026-12-25",
-  "2026-12-31",
-]);
-
-function dayMarkerClasses(date, monthIndex) {
+function dayMarkerClasses(date, monthIndex, officeDays) {
   if (date.getMonth() !== monthIndex) {
     return "";
   }
 
   return [
-    date.getDay() === 2 || date.getDay() === 5 ? "office-day" : "",
+    officeDays.includes(date.getDay()) ? "office-day" : "",
     date.getDate() === new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate() ? "month-end-day" : "",
     date.getDate() === 6 ? "ms-close-day" : "",
   ].join(" ");
@@ -108,7 +93,7 @@ function formatShiftTime(time) {
   return time.replace(/^0/, "");
 }
 
-function buildSchedule(guards, assignments, shifts) {
+function buildSchedule(guards, assignments, shifts, holidays) {
   const schedule = {};
 
   for (let month = 0; month < 12; month += 1) {
@@ -117,7 +102,7 @@ function buildSchedule(guards, assignments, shifts) {
       const date = new Date(YEAR, month, day);
       const key = dateKey(date);
       const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-      const isHoliday = HOLIDAYS_2026.has(key);
+      const isHoliday = key in holidays;
 
       if (isWeekend || isHoliday || guards.length === 0) {
         schedule[key] = [];
@@ -328,6 +313,8 @@ function App() {
     assignments,
     auditAssignments,
     shifts,
+    holidays,
+    officeDays,
     loading,
     error,
     updateGuard,
@@ -339,9 +326,15 @@ function App() {
     resetAssignments,
     updateShift,
     resetShifts,
+    updateOfficeDays,
+    addHoliday,
+    removeHoliday,
   } = useCalendarData();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const schedule = useMemo(() => buildSchedule(guards, assignments, shifts), [guards, assignments, shifts]);
+  const schedule = useMemo(
+    () => buildSchedule(guards, assignments, shifts, holidays),
+    [guards, assignments, shifts, holidays]
+  );
   const monthWeeks = useMemo(() => getMonthWeeks(monthIndex), [monthIndex]);
   const auditWeeks = useMemo(() => buildAuditWeeks(guards, auditAssignments), [guards, auditAssignments]);
 
@@ -487,6 +480,8 @@ function App() {
           <SettingsModal
             guards={guards}
             shifts={shifts}
+            officeDays={officeDays}
+            holidays={holidays}
             onClose={() => setSettingsOpen(false)}
             onUpdateGuard={updateGuard}
             onAddGuard={addGuard}
@@ -494,6 +489,9 @@ function App() {
             onResetGuards={resetGuards}
             onUpdateShift={updateShift}
             onResetShifts={resetShifts}
+            onUpdateOfficeDays={updateOfficeDays}
+            onAddHoliday={addHoliday}
+            onRemoveHoliday={removeHoliday}
             onResetAssignments={resetAssignments}
           />
         ) : null}
@@ -556,7 +554,7 @@ function App() {
                           key={date.toISOString()}
                           className={[
                             date.getMonth() === monthIndex ? "" : "outside",
-                            dayMarkerClasses(date, monthIndex),
+                            dayMarkerClasses(date, monthIndex, officeDays),
                           ].join(" ")}
                         >
                           <span>{date.getDate()}</span>
@@ -573,7 +571,7 @@ function App() {
                       {week.map((date) => {
                         const key = dateKey(date);
                         const isOutside = date.getMonth() !== monthIndex;
-                        const isHoliday = HOLIDAYS_2026.has(key);
+                        const isHoliday = key in holidays;
                         const isWeekend = date.getDay() === 0 || date.getDay() === 6;
                         const entries = schedule[key] ?? [];
 
@@ -584,7 +582,7 @@ function App() {
                               isOutside ? "outside" : "",
                               isWeekend ? "weekend" : "",
                               isHoliday ? "holiday" : "",
-                              dayMarkerClasses(date, monthIndex),
+                              dayMarkerClasses(date, monthIndex, officeDays),
                             ].join(" ")}
                           >
                             {!isOutside && !isWeekend && !isHoliday ? (
@@ -623,7 +621,7 @@ function App() {
                                 })}
                               </div>
                             ) : isHoliday && !isOutside ? (
-                              <span className="no-class">No hay Clases</span>
+                              <span className="no-class">{holidays[key] || "No hay Clases"}</span>
                             ) : null}
                           </td>
                         );

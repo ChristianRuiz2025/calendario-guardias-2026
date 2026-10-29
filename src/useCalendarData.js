@@ -15,6 +15,27 @@ export const DEFAULT_SHIFTS = [
   { id: "10-19", start: "10:00", end: "19:00", position: 2 },
 ];
 
+// Dias de oficina por defecto (getDay: 1 = lunes ... 5 = viernes).
+export const DEFAULT_OFFICE_DAYS = [2, 5];
+
+// Feriados por defecto, mientras no exista la tabla holidays.
+const DEFAULT_HOLIDAYS = Object.fromEntries(
+  [
+    "2026-01-01",
+    "2026-02-02",
+    "2026-03-16",
+    "2026-04-02",
+    "2026-04-03",
+    "2026-05-01",
+    "2026-09-16",
+    "2026-11-16",
+    "2026-12-12",
+    "2026-12-24",
+    "2026-12-25",
+    "2026-12-31",
+  ].map((dayKey) => [dayKey, ""])
+);
+
 function shiftFromRow(row) {
   return { id: row.id, start: row.start_time, end: row.end_time, position: row.position };
 }
@@ -70,6 +91,8 @@ export function useCalendarData() {
   const [assignments, setAssignments] = useState({});
   const [auditAssignments, setAuditAssignments] = useState({});
   const [shifts, setShifts] = useState(DEFAULT_SHIFTS);
+  const [holidays, setHolidays] = useState(DEFAULT_HOLIDAYS);
+  const [officeDays, setOfficeDays] = useState(DEFAULT_OFFICE_DAYS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -77,11 +100,13 @@ export function useCalendarData() {
     let active = true;
 
     async function load() {
-      const [guardsRes, shiftsRes, auditRes, shiftTemplatesRes] = await Promise.all([
+      const [guardsRes, shiftsRes, auditRes, shiftTemplatesRes, holidaysRes, settingsRes] = await Promise.all([
         supabase.from("guards").select("*").order("created_at"),
         supabase.from("shift_assignments").select("*"),
         supabase.from("audit_assignments").select("*"),
         supabase.from("shift_templates").select("*"),
+        supabase.from("holidays").select("*"),
+        supabase.from("app_settings").select("*"),
       ]);
 
       if (!active) {
@@ -104,6 +129,16 @@ export function useCalendarData() {
       // Si la tabla shift_templates aun no existe, se usan los horarios por defecto.
       logError(shiftTemplatesRes.error);
       setShifts(mergeShifts(shiftTemplatesRes.data ?? []));
+      // Igual con holidays y app_settings: sin tabla se quedan los valores por defecto.
+      logError(holidaysRes.error);
+      if (!holidaysRes.error) {
+        setHolidays(Object.fromEntries(holidaysRes.data.map((row) => [row.day_key, row.name ?? ""])));
+      }
+      logError(settingsRes.error);
+      const officeDaysRow = settingsRes.data?.find((row) => row.key === "office_days");
+      if (Array.isArray(officeDaysRow?.value)) {
+        setOfficeDays(officeDaysRow.value);
+      }
       setLoading(false);
     }
 
@@ -138,6 +173,21 @@ export function useCalendarData() {
         if (payload.eventType !== "DELETE") {
           const changed = shiftFromRow(payload.new);
           setShifts((current) => current.map((shift) => (shift.id === changed.id ? changed : shift)));
+        }
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "holidays" }, (payload) => {
+        setHolidays((current) =>
+          applyMapChange(
+            current,
+            payload,
+            (row) => row.day_key,
+            (row) => row.name ?? ""
+          )
+        );
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "app_settings" }, (payload) => {
+        if (payload.eventType !== "DELETE" && payload.new.key === "office_days" && Array.isArray(payload.new.value)) {
+          setOfficeDays(payload.new.value);
         }
       })
       .subscribe();
@@ -251,6 +301,36 @@ export function useCalendarData() {
     logError(upsertError);
   }
 
+  function updateOfficeDays(days) {
+    const next = [...days].sort((a, b) => a - b);
+    setOfficeDays(next);
+    supabase
+      .from("app_settings")
+      .upsert({ key: "office_days", value: next })
+      .then(({ error: upsertError }) => logError(upsertError));
+  }
+
+  function addHoliday(dayKey, name) {
+    setHolidays((current) => ({ ...current, [dayKey]: name }));
+    supabase
+      .from("holidays")
+      .upsert({ day_key: dayKey, name })
+      .then(({ error: upsertError }) => logError(upsertError));
+  }
+
+  function removeHoliday(dayKey) {
+    setHolidays((current) => {
+      const next = { ...current };
+      delete next[dayKey];
+      return next;
+    });
+    supabase
+      .from("holidays")
+      .delete()
+      .eq("day_key", dayKey)
+      .then(({ error: deleteError }) => logError(deleteError));
+  }
+
   async function resetAssignments() {
     setAssignments({});
     setAuditAssignments({});
@@ -265,6 +345,8 @@ export function useCalendarData() {
     assignments,
     auditAssignments,
     shifts,
+    holidays,
+    officeDays,
     loading,
     error,
     updateGuard,
@@ -276,5 +358,8 @@ export function useCalendarData() {
     resetAssignments,
     updateShift,
     resetShifts,
+    updateOfficeDays,
+    addHoliday,
+    removeHoliday,
   };
 }
