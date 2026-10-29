@@ -792,11 +792,11 @@ function App() {
               <i className="legend-swatch ms-close"></i>
               Cierre MS
             </span>
+            <span>
+              <i className="legend-swatch vacation"></i>
+              Vacaciones
+            </span>
           </div>
-
-          <footer className="summary-bar">
-            <span>Cada horario laboral genera 00:00-entrada y salida-23:59.</span>
-          </footer>
         </section>
       </section>
     </main>
