@@ -1,10 +1,89 @@
 :root {
-  color: #16212e;
+  --bg: #eef3f7;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --border: #cdd8e3;
+  --border-soft: #e3ebf2;
+  --text: #16212e;
+  --text-input: #1f3447;
+  --muted: #5c758a;
+  --muted-strong: #40586b;
+  --accent-text: #164766;
+  --accent-soft: #eef6fb;
+  --cell-bg: #fffdf7;
+  --offduty-bg: #a5a5a5;
+  --offduty-text: #202020;
+  --header-cell: #9fc5e4;
+  --header-cell-text: #001729;
+  --danger: #9b2839;
+  --danger-soft: #fbeef0;
+  --danger-border: #e3b5bd;
+  --disabled-text: #a0b0bd;
+  --ok-soft: #dcf3e5;
+  --ok-text: #0f5a32;
+  --mark-width: 5px;
+  color-scheme: light;
+  color: var(--text);
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #eef3f7;
+  background: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+}
+
+/* Modo oscuro: sigue al sistema, salvo que se elija otro con el boton (data-theme). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1720;
+    --surface: #18222d;
+    --surface-2: #1f2b38;
+    --border: #2f3f4f;
+    --border-soft: #253443;
+    --text: #e6edf3;
+    --text-input: #dbe5ee;
+    --muted: #93a8b9;
+    --muted-strong: #b3c4d2;
+    --accent-text: #9fd0f0;
+    --accent-soft: #1b3346;
+    --cell-bg: #2a323b;
+    --offduty-bg: #4a525b;
+    --offduty-text: #e6e6e6;
+    --header-cell: #1d3a52;
+    --header-cell-text: #d3e6f5;
+    --danger: #f08a9a;
+    --danger-soft: #3a1f25;
+    --danger-border: #6b2f3a;
+    --disabled-text: #5d6f7e;
+    --ok-soft: #173a27;
+    --ok-text: #8fe0b0;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0f1720;
+  --surface: #18222d;
+  --surface-2: #1f2b38;
+  --border: #2f3f4f;
+  --border-soft: #253443;
+  --text: #e6edf3;
+  --text-input: #dbe5ee;
+  --muted: #93a8b9;
+  --muted-strong: #b3c4d2;
+  --accent-text: #9fd0f0;
+  --accent-soft: #1b3346;
+  --cell-bg: #2a323b;
+  --offduty-bg: #4a525b;
+  --offduty-text: #e6e6e6;
+  --header-cell: #1d3a52;
+  --header-cell-text: #d3e6f5;
+  --danger: #f08a9a;
+  --danger-soft: #3a1f25;
+  --danger-border: #6b2f3a;
+  --disabled-text: #5d6f7e;
+  --ok-soft: #173a27;
+  --ok-text: #8fe0b0;
+  color-scheme: dark;
 }
 
 * {
@@ -13,6 +92,8 @@
 
 body {
   margin: 0;
+  color: var(--text);
+  background: var(--bg);
   min-width: 320px;
   min-height: 100vh;
 }
@@ -55,7 +136,7 @@ button {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 16px;
+  padding: 16px 14px;
   color: #ffffff;
   background: #114c73;
   border: 1px solid #0e3e5d;
@@ -73,7 +154,7 @@ p {
 }
 
 .brand h1 {
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   line-height: 1.2;
 }
 
@@ -85,8 +166,8 @@ p {
 
 .panel {
   padding: 14px;
-  background: #ffffff;
-  border: 1px solid #cdd8e3;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
 }
 
@@ -119,10 +200,10 @@ p {
 
 .month-grid button {
   min-height: 36px;
-  border: 1px solid #cdd8e3;
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: #f8fafc;
-  color: #365166;
+  background: var(--surface-2);
+  color: var(--muted-strong);
 }
 
 .month-grid button.active {
@@ -148,10 +229,10 @@ p {
   width: 100%;
   min-width: 0;
   height: 34px;
-  border: 1px solid #cdd8e3;
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 0 8px;
-  color: #1f3447;
+  color: var(--text-input);
 }
 
 .guard-row .swatch {
@@ -163,10 +244,10 @@ p {
   place-items: center;
   width: 36px;
   height: 36px;
-  border: 1px solid #c7d5e3;
+  border: 1px solid var(--border);
   border-radius: 6px;
-  color: #164766;
-  background: #ffffff;
+  color: var(--accent-text);
+  background: var(--surface);
 }
 
 .icon-button:hover,
@@ -176,7 +257,7 @@ p {
 }
 
 .icon-button.danger {
-  color: #9b2839;
+  color: var(--danger);
 }
 
 .reset-button,
@@ -197,13 +278,13 @@ p {
 .reset-button {
   width: 100%;
   margin-top: 12px;
-  color: #164766;
-  background: #eef6fb;
+  color: var(--accent-text);
+  background: var(--accent-soft);
 }
 
 .download-button.secondary {
-  color: #164766;
-  background: #dff0fa;
+  color: var(--accent-text);
+  background: var(--accent-soft);
 }
 
 .shift-panel,
@@ -215,8 +296,8 @@ p {
 .shift-line,
 .shift-editor {
   padding: 9px 0;
-  border-top: 1px solid #e3ebf2;
-  color: #40586b;
+  border-top: 1px solid var(--border-soft);
+  color: var(--muted-strong);
 }
 
 .shift-line {
@@ -224,7 +305,7 @@ p {
 }
 
 .shift-line strong {
-  color: #16212e;
+  color: var(--text);
 }
 
 .shift-editor {
@@ -235,7 +316,7 @@ p {
 }
 
 .shift-editor span {
-  color: #16212e;
+  color: var(--text);
   font-weight: 800;
 }
 
@@ -244,15 +325,15 @@ p {
   width: 100%;
   min-width: 0;
   min-height: 36px;
-  border: 1px solid #cdd8e3;
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 0 8px;
-  color: #1f3447;
-  background: #ffffff;
+  color: var(--text-input);
+  background: var(--surface);
 }
 
 .export-panel label {
-  color: #40586b;
+  color: var(--muted-strong);
   font-size: 0.85rem;
   font-weight: 800;
 }
@@ -265,8 +346,8 @@ p {
 
 .topbar {
   padding: 16px;
-  background: #ffffff;
-  border: 1px solid #cdd8e3;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
 }
 
@@ -276,7 +357,7 @@ p {
 }
 
 .eyebrow {
-  color: #5c758a;
+  color: var(--muted);
   font-size: 0.8rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -290,8 +371,8 @@ p {
 
 .calendar-wrap {
   overflow-x: auto;
-  background: #ffffff;
-  border: 1px solid #c7d5e3;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
 }
 
@@ -310,8 +391,8 @@ p {
 
 .guard-calendar thead th {
   height: 30px;
-  color: #001729;
-  background: #9fc5e4;
+  color: var(--header-cell-text);
+  background: var(--header-cell);
   font-size: 0.82rem;
   font-weight: 500;
 }
@@ -354,7 +435,7 @@ p {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  border: 3px solid transparent;
+  border: var(--mark-width) solid transparent;
 }
 
 .date-row td.office-day::after,
@@ -405,8 +486,8 @@ p {
   height: max(78px, calc(var(--shift-rows, 3) * 24px));
   width: 58px;
   padding-left: 5px;
-  color: #003b60;
-  background: #9fc5e4;
+  color: var(--header-cell-text);
+  background: var(--header-cell);
   text-align: left;
   font-weight: 500;
 }
@@ -415,7 +496,7 @@ p {
   position: relative;
   height: max(78px, calc(var(--shift-rows, 3) * 24px));
   padding: 0;
-  background: #fffdf7;
+  background: var(--cell-bg);
 }
 
 .schedule-row td.weekend,
@@ -430,7 +511,7 @@ p {
 .schedule-row .audit-cell {
   height: max(78px, calc(var(--shift-rows, 3) * 24px));
   padding: 0;
-  background: #fffdf7;
+  background: var(--cell-bg);
 }
 
 .time-stack {
@@ -475,8 +556,8 @@ p {
 }
 
 .assignment-column.off-duty {
-  background: #a5a5a5;
-  color: #202020;
+  background: var(--offduty-bg);
+  color: var(--offduty-text);
 }
 
 .audit-select,
@@ -511,13 +592,13 @@ p {
 }
 
 .audit-select.unassigned {
-  background: #a5a5a5;
-  color: #202020;
+  background: var(--offduty-bg);
+  color: var(--offduty-text);
 }
 
 .audit-select option {
-  background: #ffffff;
-  color: #111111;
+  background: var(--surface);
+  color: var(--text);
 }
 
 .audit-select:focus {
@@ -525,8 +606,8 @@ p {
 }
 
 .audit-empty {
-  background: #a5a5a5;
-  color: #202020;
+  background: var(--offduty-bg);
+  color: var(--offduty-text);
 }
 
 .guard-chip {
@@ -556,9 +637,9 @@ p {
 .summary-bar {
   flex-wrap: wrap;
   padding: 12px 16px;
-  color: #40586b;
-  background: #ffffff;
-  border: 1px solid #cdd8e3;
+  color: var(--muted-strong);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 0.9rem;
 }
@@ -569,9 +650,9 @@ p {
   justify-content: center;
   gap: 10px;
   padding: 10px 12px;
-  color: #40586b;
-  background: #ffffff;
-  border: 1px solid #cdd8e3;
+  color: var(--muted-strong);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 0.86rem;
   font-weight: 800;
@@ -587,7 +668,7 @@ p {
   width: 18px;
   height: 18px;
   border-radius: 4px;
-  background: #ffffff;
+  background: var(--surface);
 }
 
 .legend-swatch.office {
@@ -654,8 +735,8 @@ p {
   width: 100%;
   max-width: 340px;
   padding: 20px;
-  background: #ffffff;
-  border: 1px solid #cdd8e3;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
 }
 
@@ -666,12 +747,12 @@ p {
 .login-card label {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #365166;
+  color: var(--muted-strong);
 }
 
 .login-card input {
   padding: 8px 10px;
-  border: 1px solid #c7d5e3;
+  border: 1px solid var(--border);
   border-radius: 6px;
 }
 
@@ -686,7 +767,7 @@ p {
 }
 
 .login-error {
-  color: #9b2839;
+  color: var(--danger);
   font-size: 0.85rem;
 }
 
@@ -704,8 +785,8 @@ p {
 .modal {
   width: 100%;
   max-width: 1040px;
-  background: #eef3f7;
-  border: 1px solid #cdd8e3;
+  background: var(--bg);
+  border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: 0 18px 50px rgba(10, 30, 46, 0.3);
 }
@@ -747,43 +828,43 @@ p {
   width: 100%;
   min-width: 0;
   height: 34px;
-  border: 1px solid #cdd8e3;
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 0 8px;
-  color: #1f3447;
+  color: var(--text-input);
 }
 
 .shift-editor-head span {
-  color: #5c758a;
+  color: var(--muted);
   font-size: 0.78rem;
   font-weight: 800;
   text-transform: uppercase;
 }
 
 .settings-hint {
-  color: #5c758a;
+  color: var(--muted);
   font-size: 0.82rem;
 }
 
 .reset-button.danger {
-  color: #9b2839;
-  background: #fbeef0;
-  border-color: #e3b5bd;
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-color: var(--danger-border);
 }
 
 .reset-button.danger:hover {
-  border-color: #9b2839;
+  border-color: var(--danger);
 }
 
 .brand-actions {
   display: flex;
-  gap: 4px;
+  gap: 3px;
   margin-left: auto;
 }
 
 .brand-actions .icon-button {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
 }
 
 .brand h1,
@@ -800,11 +881,11 @@ p {
 
 .weekday-toggle button {
   min-height: 36px;
-  border: 1px solid #cdd8e3;
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 0 4px;
-  background: #f8fafc;
-  color: #365166;
+  background: var(--surface-2);
+  color: var(--muted-strong);
   font-size: 0.82rem;
   font-weight: 700;
 }
@@ -831,10 +912,10 @@ p {
   width: 100%;
   min-width: 0;
   height: 34px;
-  border: 1px solid #cdd8e3;
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 0 8px;
-  color: #1f3447;
+  color: var(--text-input);
 }
 
 .holiday-list {
@@ -844,7 +925,7 @@ p {
   margin-top: 12px;
   padding-top: 10px;
   overflow-y: auto;
-  border-top: 1px solid #e3ebf2;
+  border-top: 1px solid var(--border-soft);
 }
 
 .holiday-table {
@@ -856,7 +937,7 @@ p {
 .holiday-table th,
 .holiday-table td {
   padding: 4px 6px;
-  border-bottom: 1px solid #e3ebf2;
+  border-bottom: 1px solid var(--border-soft);
   vertical-align: middle;
 }
 
@@ -865,13 +946,13 @@ p {
 }
 
 .holiday-month {
-  border: 1px solid #e3ebf2;
+  border: 1px solid var(--border-soft);
   border-radius: 6px;
-  background: #ffffff;
+  background: var(--surface);
 }
 
 .holiday-month.open {
-  border-color: #cdd8e3;
+  border-color: var(--border);
 }
 
 .holiday-month-toggle {
@@ -883,19 +964,19 @@ p {
   border: 0;
   border-radius: 6px;
   padding: 0 10px;
-  color: #16212e;
+  color: var(--text);
   background: transparent;
   font-weight: 800;
   text-align: left;
 }
 
 .holiday-month-toggle:hover {
-  background: #f4f8fb;
+  background: var(--accent-soft);
 }
 
 .holiday-chevron {
   flex: 0 0 auto;
-  color: #5c758a;
+  color: var(--muted);
   transition: transform 0.15s ease;
 }
 
@@ -906,13 +987,13 @@ p {
 
 .holiday-count {
   margin-left: auto;
-  color: #5c758a;
+  color: var(--muted);
   font-size: 0.8rem;
   font-weight: 600;
 }
 
 .holiday-month .holiday-table {
-  border-top: 1px solid #e3ebf2;
+  border-top: 1px solid var(--border-soft);
 }
 
 .holiday-month .holiday-table td:first-child {
@@ -921,14 +1002,14 @@ p {
 
 .holiday-table .holiday-day {
   width: 34px;
-  color: #16212e;
+  color: var(--text);
   text-align: right;
   font-weight: 800;
 }
 
 .holiday-table .holiday-weekday {
   width: 84px;
-  color: #5c758a;
+  color: var(--muted);
 }
 
 .holiday-table .holiday-action {
@@ -943,14 +1024,14 @@ p {
   border: 1px solid transparent;
   border-radius: 6px;
   padding: 0 6px;
-  color: #1f3447;
+  color: var(--text-input);
   background: transparent;
 }
 
 .holiday-table input:hover,
 .holiday-table input:focus {
-  border-color: #cdd8e3;
-  background: #ffffff;
+  border-color: var(--border);
+  background: var(--surface);
 }
 
 .holiday-table .icon-button {
@@ -976,17 +1057,17 @@ p {
 }
 
 .close-rule strong {
-  color: #16212e;
+  color: var(--text);
   font-size: 0.88rem;
 }
 
 .close-day-input {
   width: 54px;
   height: 28px;
-  border: 1px solid #cdd8e3;
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 0 6px;
-  color: #1f3447;
+  color: var(--text-input);
   font-weight: 700;
 }
 
@@ -1089,7 +1170,7 @@ button.rotation-chip:hover {
 
 .rotation-dates label,
 .rotation-no-end {
-  color: #40586b;
+  color: var(--muted-strong);
   font-size: 0.82rem;
   font-weight: 700;
 }
@@ -1099,15 +1180,15 @@ button.rotation-chip:hover {
   width: 100%;
   height: 34px;
   margin-top: 4px;
-  border: 1px solid #cdd8e3;
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 0 8px;
-  color: #1f3447;
+  color: var(--text-input);
 }
 
 .rotation-dates input:disabled {
-  color: #a0b0bd;
-  background: #f4f6f8;
+  color: var(--disabled-text);
+  background: var(--surface-2);
 }
 
 .rotation-no-end {
@@ -1127,7 +1208,7 @@ button.rotation-chip:hover {
 }
 
 .form-error {
-  color: #9b2839;
+  color: var(--danger);
   font-size: 0.82rem;
   font-weight: 700;
 }
@@ -1135,14 +1216,14 @@ button.rotation-chip:hover {
 .rotation-list {
   display: grid;
   gap: 8px;
-  border: 1px solid #e3ebf2;
+  border: 1px solid var(--border-soft);
   border-radius: 6px;
   padding: 0;
 }
 
 .rotation-list.open {
   padding-bottom: 8px;
-  border-color: #cdd8e3;
+  border-color: var(--border);
 }
 
 .rotation-list .rotation-item {
@@ -1152,7 +1233,7 @@ button.rotation-chip:hover {
 .rotation-item {
   display: grid;
   gap: 8px;
-  border: 1px solid #e3ebf2;
+  border: 1px solid var(--border-soft);
   border-radius: 6px;
   padding: 8px 10px;
 }
@@ -1166,7 +1247,7 @@ button.rotation-chip:hover {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #16212e;
+  color: var(--text);
   font-size: 0.84rem;
   font-weight: 700;
 }
@@ -1183,8 +1264,8 @@ button.rotation-chip:hover {
 .rotation-badge {
   border-radius: 999px;
   padding: 2px 8px;
-  color: #0f5a32;
-  background: #dcf3e5;
+  color: var(--ok-text);
+  background: var(--ok-soft);
   font-size: 0.72rem;
   font-weight: 800;
 }

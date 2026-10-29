@@ -6,13 +6,16 @@ import {
   ChevronRight,
   Download,
   LogOut,
+  Moon,
   Settings,
+  Sun,
 } from "lucide-react";
 import "./styles.css";
 import Login from "./Login";
 import { supabase } from "./supabaseClient";
 import { useCalendarData } from "./useCalendarData";
 import SettingsModal from "./SettingsModal";
+import { useTheme } from "./useTheme";
 import { dateKey, getAuditGuard, pad, startOfWorkWeek } from "./auditRotation";
 
 const YEAR = 2026;
@@ -364,6 +367,7 @@ function App() {
     removeAuditRotation,
   } = useCalendarData();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
   const schedule = useMemo(
     () => buildSchedule(guards, assignments, shifts, holidays),
     [guards, assignments, shifts, holidays]
@@ -382,16 +386,6 @@ function App() {
     });
     return () => authListener.subscription.unsubscribe();
   }, []);
-
-  const monthEvents = useMemo(() => {
-    const daysInMonth = new Date(YEAR, monthIndex + 1, 0).getDate();
-    return Array.from({ length: daysInMonth }, (_, index) => {
-      const date = new Date(YEAR, monthIndex, index + 1);
-      return schedule[dateKey(date)] ?? [];
-    })
-      .flat()
-      .filter((shift) => selectedGuardId === "all" || shift.guard.id === selectedGuardId);
-  }, [monthIndex, schedule, selectedGuardId]);
 
   function cycleAssignment(dayKey, guardId, currentShiftId) {
     updateAssignment(dayKey, guardId, nextShiftId(currentShiftId, shifts));
@@ -456,9 +450,17 @@ function App() {
             <CalendarDays aria-hidden="true" />
             <div>
               <h1>Guardias 2026</h1>
-              <p>Outlook fuera de oficina</p>
+              <p>Siclik CESA</p>
             </div>
             <div className="brand-actions">
+              <button
+                className="icon-button"
+                onClick={toggleTheme}
+                aria-label={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+                title={theme === "dark" ? "Modo claro" : "Modo oscuro"}
+              >
+                {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+              </button>
               <button
                 className="icon-button"
                 onClick={() => setSettingsOpen(true)}
@@ -718,7 +720,6 @@ function App() {
           </div>
 
           <footer className="summary-bar">
-            <span>{monthEvents.length * 2} citas fuera de oficina en el mes</span>
             <span>Cada horario laboral genera 00:00-entrada y salida-23:59.</span>
           </footer>
         </section>
