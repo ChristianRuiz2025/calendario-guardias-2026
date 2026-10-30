@@ -214,16 +214,16 @@ export default async function handler(req, res) {
     ? `<p style="font-family:Arial,sans-serif;font-size:14px;color:#16212e;margin:0 0 12px">` +
       `${escapeHtml(mailSettings.message.trim()).replace(/\n/g, "<br>")}</p>`
     : "";
-  const email = buildMonthEmail({ title, monthLabel: `${MONTH_NAMES[monthIndex]} ${YEAR}`, weeks, shifts });
+  const email = buildMonthEmail({ title, intro, monthLabel: `${MONTH_NAMES[monthIndex]} ${YEAR}`, weeks, shifts });
   const { text } = email;
   // Con la foto del calendario, el correo es esa imagen (igual a la app) mas la simbologia.
   const html = inlineImage
     ? `<div style="background:#ffffff;padding:12px;max-width:760px">` +
-      intro +
       `<p style="font-family:Arial,sans-serif;font-size:16px;font-weight:bold;color:#16212e;margin:0 0 10px">${escapeHtml(title)}</p>` +
+      intro +
       `<img src="cid:${IMAGE_CID}" alt="${escapeHtml(title)}" width="720" style="display:block;width:100%;max-width:720px;height:auto">` +
       `${buildLegendHtml()}</div>`
-    : intro + email.html;
+    : email.html;
   const sentBy = sender?.name ?? userData.user.email;
 
   const message = {
@@ -233,7 +233,10 @@ export default async function handler(req, res) {
     cc,
     replyTo: userData.user.email,
     subject: title,
-    text: `${mailSettings.message.trim() ? `${mailSettings.message.trim()}\n\n` : ""}${text}\n\nEnviado por ${sentBy}.`,
+    // Titulo, luego el mensaje y luego el resumen del mes (text ya empieza con el titulo).
+    text: [title, mailSettings.message.trim(), text.split("\n").slice(2).join("\n"), `Enviado por ${sentBy}.`]
+      .filter(Boolean)
+      .join("\n\n"),
     // "light only": pide a los clientes de correo no invertir los colores en modo oscuro.
     html:
       `<!doctype html><html><head><meta charset="utf-8">` +

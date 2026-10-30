@@ -190,7 +190,8 @@ export function buildLegendHtml() {
 }
 
 // weeks: lo que devuelve buildMonthWeeks. shifts: los turnos ordenados por hora de entrada.
-export function buildMonthEmail({ title, monthLabel, weeks, shifts }) {
+// intro: HTML opcional (el mensaje de Configuracion) que va entre el titulo y la tabla.
+export function buildMonthEmail({ title, intro = "", monthLabel, weeks, shifts }) {
   const shiftCount = Math.max(shifts.length, 1);
   const th = `${FONT};font-size:12px;border:1px dotted ${COLORS.border}`;
   const textLines = [title, ""];
@@ -275,6 +276,7 @@ export function buildMonthEmail({ title, monthLabel, weeks, shifts }) {
   const html =
     `<div style="background:#ffffff;padding:12px;max-width:760px">` +
     `<p style="${FONT};font-size:16px;font-weight:bold;color:#16212e;margin:0 0 10px">${escapeHtml(title)}</p>` +
+    intro +
     `<table cellpadding="0" cellspacing="0" style="width:100%;max-width:720px;border-collapse:collapse;table-layout:fixed">` +
     `<colgroup><col style="width:58px"><col><col><col><col><col><col style="width:110px"></colgroup>` +
     `<thead>${header}</thead><tbody>${body}</tbody></table>${buildLegendHtml()}</div>`;
