@@ -23,7 +23,7 @@
   --ok-text: #0f5a32;
   --mark-width: 5px;
   /* Acento: el color de la persona que inicio sesion (lo pone la app); azul por defecto. */
-  --accent: var(--accent);
+  --accent: #236996;
   --accent-contrast: #ffffff;
   --brand-bg: #114c73;
   --brand-border: #0e3e5d;
@@ -763,6 +763,8 @@ p {
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
+  color: var(--text-input);
+  background: var(--surface);
 }
 
 .login-card button {
