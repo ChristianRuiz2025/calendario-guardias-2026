@@ -390,9 +390,6 @@ function App() {
     officeDays,
     msCloseDay,
     mailSettings,
-    invgateSettings,
-    invgateLastRun,
-    setInvgateLastRun,
     auditRotations,
     vacations,
     loading,
@@ -408,7 +405,6 @@ function App() {
     updateOfficeDays,
     updateMsCloseDay,
     updateMailSettings,
-    updateInvgateSettings,
     addHoliday,
     removeHoliday,
     saveAuditRotation,
@@ -482,20 +478,6 @@ function App() {
     extraFiles.forEach(([filename, fileContent], index) => {
       setTimeout(() => downloadTextFile(filename, fileContent), 300 * (index + 1));
     });
-  }
-
-  // Llama a api/invgate-sync.js con la sesion del usuario (Configuracion > InvGate).
-  async function invgateRequest(body) {
-    const response = await fetch("/api/invgate-sync", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-      body: JSON.stringify(body),
-    });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(result.error ?? "No se pudo conectar con InvGate.");
-    }
-    return result;
   }
 
   // Envia el correo del mes desde el servidor (api/enviar-mes.js) a los destinatarios de Configuracion.
@@ -643,11 +625,6 @@ function App() {
             msCloseDay={msCloseDay}
             mailSettings={mailSettings}
             onUpdateMailSettings={updateMailSettings}
-            invgateSettings={invgateSettings}
-            invgateLastRun={invgateLastRun}
-            onUpdateInvgateSettings={updateInvgateSettings}
-            onInvgateRequest={invgateRequest}
-            onInvgateRunResult={setInvgateLastRun}
             holidays={holidays}
             onClose={() => setSettingsOpen(false)}
             onUpdateGuard={updateGuard}

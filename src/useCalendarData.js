@@ -70,9 +70,6 @@ export function useCalendarData() {
   const [msCloseDay, setMsCloseDay] = useState(DEFAULT_MS_CLOSE_DAY);
   // Configuracion del correo del mes (ver src/mailSettings.js).
   const [mailSettings, setMailSettings] = useState(DEFAULT_MAIL_SETTINGS);
-  // Sincronizacion con InvGate (api/invgate-sync.js) y su ultimo resultado.
-  const [invgateSettings, setInvgateSettings] = useState({ enabled: false, dryRun: true, groupId: null });
-  const [invgateLastRun, setInvgateLastRun] = useState(null);
   const [auditRotations, setAuditRotations] = useState(DEFAULT_AUDIT_ROTATIONS);
   // Dias de vacaciones: { "YYYY-MM-DD|guardId": true }
   const [vacations, setVacations] = useState({});
@@ -133,11 +130,6 @@ export function useCalendarData() {
       }
       const mailSettingsRow = settingsRes.data?.find((row) => row.key === "mail_recipients");
       setMailSettings(normalizeMailSettings(mailSettingsRow?.value));
-      const invgateRow = settingsRes.data?.find((row) => row.key === "invgate");
-      if (invgateRow?.value) {
-        setInvgateSettings((current) => ({ ...current, ...invgateRow.value }));
-      }
-      setInvgateLastRun(settingsRes.data?.find((row) => row.key === "invgate_last_run")?.value ?? null);
       // Sin tabla audit_rotations se usa el orden por defecto.
       logError(rotationsRes.error);
       if (!rotationsRes.error) {
@@ -204,12 +196,6 @@ export function useCalendarData() {
         }
         if (payload.eventType !== "DELETE" && payload.new.key === "mail_recipients") {
           setMailSettings(normalizeMailSettings(payload.new.value));
-        }
-        if (payload.eventType !== "DELETE" && payload.new.key === "invgate") {
-          setInvgateSettings((current) => ({ ...current, ...payload.new.value }));
-        }
-        if (payload.eventType !== "DELETE" && payload.new.key === "invgate_last_run") {
-          setInvgateLastRun(payload.new.value);
         }
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "audit_rotations" }, (payload) => {
@@ -372,15 +358,6 @@ export function useCalendarData() {
       .then(({ error: upsertError }) => logError(upsertError));
   }
 
-  function updateInvgateSettings(changes) {
-    const next = { ...invgateSettings, ...changes };
-    setInvgateSettings(next);
-    supabase
-      .from("app_settings")
-      .upsert({ key: "invgate", value: next })
-      .then(({ error: upsertError }) => logError(upsertError));
-  }
-
   function addHoliday(dayKey, name) {
     setHolidays((current) => ({ ...current, [dayKey]: name }));
     supabase
@@ -453,9 +430,6 @@ export function useCalendarData() {
     officeDays,
     msCloseDay,
     mailSettings,
-    invgateSettings,
-    invgateLastRun,
-    setInvgateLastRun,
     auditRotations,
     vacations,
     loading,
@@ -471,7 +445,6 @@ export function useCalendarData() {
     updateOfficeDays,
     updateMsCloseDay,
     updateMailSettings,
-    updateInvgateSettings,
     addHoliday,
     removeHoliday,
     saveAuditRotation,
