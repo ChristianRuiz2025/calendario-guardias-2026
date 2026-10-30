@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { ChevronRight, Plus, Trash2, X } from "lucide-react";
 import AuditRotationEditor from "./AuditRotationEditor";
 import MailSettings from "./MailSettings";
+import InvgateSettings from "./InvgateSettings";
 import { dateKey, findRotationGuard } from "./auditRotation";
 import { resolveRecipients } from "./mailSettings";
 
@@ -88,6 +89,11 @@ export default function SettingsModal({
   msCloseDay,
   mailSettings,
   onUpdateMailSettings,
+  invgateSettings,
+  invgateLastRun,
+  onUpdateInvgateSettings,
+  onInvgateRequest,
+  onInvgateRunResult,
   holidays,
   onClose,
   onUpdateGuard,
@@ -381,6 +387,22 @@ export default function SettingsModal({
             >
               <p className="settings-hint">A quien y como se envia el correo de "Enviar por correo".</p>
               <MailSettings guards={guards} settings={mailSettings} onUpdate={onUpdateMailSettings} />
+            </SettingsSection>
+
+            <SettingsSection
+              {...section("invgate")}
+              title="InvGate"
+              summary={
+                !invgateSettings.enabled ? "Desactivado" : invgateSettings.dryRun !== false ? "Simulando" : "Activo"
+              }
+            >
+              <InvgateSettings
+                settings={invgateSettings}
+                lastRun={invgateLastRun}
+                onUpdate={onUpdateInvgateSettings}
+                request={onInvgateRequest}
+                onRunResult={onInvgateRunResult}
+              />
             </SettingsSection>
 
             <SettingsSection
