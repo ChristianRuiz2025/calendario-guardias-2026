@@ -1,13 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 import { DEFAULT_AUDIT_ROTATIONS, rotationFromRow, rotationToRow } from "./auditRotation";
-import { DEFAULT_HOLIDAYS, DEFAULT_SHIFTS } from "./calendarDefaults";
+import { DEFAULT_HOLIDAYS, DEFAULT_MS_CLOSE_DAY, DEFAULT_OFFICE_DAYS, DEFAULT_SHIFTS } from "./calendarDefaults";
 
-// Dias de oficina por defecto (getDay: 1 = lunes ... 5 = viernes).
-export const DEFAULT_OFFICE_DAYS = [2, 5];
-
-// Dia del mes del cierre MS (si no es dia habil se recorre al siguiente).
-export const DEFAULT_MS_CLOSE_DAY = 6;
 
 
 function shiftFromRow(row) {

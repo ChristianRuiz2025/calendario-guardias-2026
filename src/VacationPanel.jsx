@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { dateKey, parseDateKey } from "./auditRotation";
+import { isWorkingDay } from "./calendarRules";
 
 const YEAR = 2026;
 
@@ -18,10 +19,6 @@ const MONTH_NAMES = [
   "noviembre",
   "diciembre",
 ];
-
-function isWorkingDay(date, holidays) {
-  return date.getDay() >= 1 && date.getDay() <= 5 && !(dateKey(date) in holidays);
-}
 
 function nextWorkingDay(dayKey, holidays) {
   const date = parseDateKey(dayKey);

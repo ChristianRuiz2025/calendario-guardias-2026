@@ -8,6 +8,12 @@ export const DEFAULT_SHIFTS = [
   { id: "10-19", start: "10:00", end: "19:00", position: 2 },
 ];
 
+// Dias de oficina por defecto (getDay: 1 = lunes ... 5 = viernes).
+export const DEFAULT_OFFICE_DAYS = [2, 5];
+
+// Dia del mes del cierre MS (si no es dia habil se recorre al siguiente).
+export const DEFAULT_MS_CLOSE_DAY = 6;
+
 // Feriados por defecto, mientras no exista la tabla holidays.
 export const DEFAULT_HOLIDAYS = {
   "2026-01-01": "Año nuevo",

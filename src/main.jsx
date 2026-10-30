@@ -18,6 +18,7 @@ import { useCalendarData } from "./useCalendarData";
 import SettingsModal from "./SettingsModal";
 import VacationPanel from "./VacationPanel";
 import { useTheme } from "./useTheme";
+import { buildCloseDays } from "./calendarRules";
 import { dateKey, getAuditGuard, pad, startOfWorkWeek } from "./auditRotation";
 
 const YEAR = 2026;
@@ -39,34 +40,6 @@ const MONTHS = [
 ];
 
 const WEEKDAYS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Auditorias"];
-
-function isWorkingDay(date, holidays) {
-  return date.getDay() >= 1 && date.getDay() <= 5 && !(dateKey(date) in holidays);
-}
-
-// Fechas de cierre del anio:
-// - fin de mes: ultimo dia habil del mes (se recorre hacia atras)
-// - cierre MS: el dia msCloseDay de cada mes, o el siguiente dia habil
-function buildCloseDays(holidays, msCloseDay) {
-  const monthEndDays = new Set();
-  const msCloseDays = new Set();
-
-  for (let month = 0; month < 12; month += 1) {
-    const monthEnd = new Date(YEAR, month + 1, 0);
-    while (!isWorkingDay(monthEnd, holidays)) {
-      monthEnd.setDate(monthEnd.getDate() - 1);
-    }
-    monthEndDays.add(dateKey(monthEnd));
-
-    const msClose = new Date(YEAR, month, Math.min(msCloseDay, monthEnd.getDate()));
-    while (!isWorkingDay(msClose, holidays)) {
-      msClose.setDate(msClose.getDate() + 1);
-    }
-    msCloseDays.add(dateKey(msClose));
-  }
-
-  return { monthEndDays, msCloseDays };
-}
 
 function dayMarkerClasses(date, monthIndex, officeDays, closeDays) {
   if (date.getMonth() !== monthIndex) {
@@ -447,7 +420,7 @@ function App() {
     () => buildSchedule(guards, assignments, shifts, holidays, vacations),
     [guards, assignments, shifts, holidays, vacations]
   );
-  const closeDays = useMemo(() => buildCloseDays(holidays, msCloseDay), [holidays, msCloseDay]);
+  const closeDays = useMemo(() => buildCloseDays(YEAR, holidays, msCloseDay), [holidays, msCloseDay]);
   const monthWeeks = useMemo(() => getMonthWeeks(monthIndex), [monthIndex]);
   const auditWeeks = useMemo(
     () => buildAuditWeeks(guards, auditAssignments, auditRotations),

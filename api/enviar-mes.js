@@ -16,7 +16,12 @@
 import nodemailer from "nodemailer";
 import { createClient } from "@supabase/supabase-js";
 import { DEFAULT_AUDIT_ROTATIONS, rotationFromRow } from "../src/auditRotation.js";
-import { DEFAULT_HOLIDAYS, DEFAULT_SHIFTS } from "../src/calendarDefaults.js";
+import {
+  DEFAULT_HOLIDAYS,
+  DEFAULT_MS_CLOSE_DAY,
+  DEFAULT_OFFICE_DAYS,
+  DEFAULT_SHIFTS,
+} from "../src/calendarDefaults.js";
 import { MONTH_NAMES, buildMonthEmail, buildMonthWeeks } from "../src/monthEmail.js";
 
 const YEAR = 2026;
@@ -142,13 +147,22 @@ export default async function handler(req, res) {
   }
 
   const guards = guardsRes.data;
+  // Turnos ordenados por hora de entrada, igual que en la app.
+  const shifts = (
+    shiftsRes.data?.length
+      ? shiftsRes.data.map((row) => ({ id: row.id, start: row.start_time, end: row.end_time }))
+      : DEFAULT_SHIFTS
+  ).sort((a, b) => a.start.localeCompare(b.start) || a.end.localeCompare(b.end));
+  const setting = (key) => settingsRes.data?.find((row) => row.key === key)?.value;
+  const officeDays = setting("office_days");
+  const msCloseDay = setting("ms_close_day");
   const weeks = buildMonthWeeks({
     year: YEAR,
     monthIndex,
     guards,
-    shifts: shiftsRes.data?.length
-      ? shiftsRes.data.map((row) => ({ id: row.id, start: row.start_time, end: row.end_time }))
-      : DEFAULT_SHIFTS,
+    shifts,
+    officeDays: Array.isArray(officeDays) ? officeDays : DEFAULT_OFFICE_DAYS,
+    msCloseDay: Number.isInteger(msCloseDay) ? msCloseDay : DEFAULT_MS_CLOSE_DAY,
     assignments: Object.fromEntries(
       assignmentsRes.data.map((row) => [`${row.day_key}|${row.guard_id}`, row.shift_id])
     ),
@@ -164,7 +178,7 @@ export default async function handler(req, res) {
     (guard) => (guard.email ?? "").trim().toLowerCase() === userData.user.email?.toLowerCase()
   );
   const title = `Guardias ${MONTH_NAMES[monthIndex]} ${YEAR}`;
-  const { html, text } = buildMonthEmail({ title, weeks });
+  const { html, text } = buildMonthEmail({ title, monthLabel: `${MONTH_NAMES[monthIndex]} ${YEAR}`, weeks, shifts });
   const sentBy = sender?.name ?? userData.user.email;
 
   const message = {
@@ -174,9 +188,14 @@ export default async function handler(req, res) {
     replyTo: userData.user.email,
     subject: title,
     text: `${text}\n\nEnviado por ${sentBy}.`,
-    html: `${html}<p style="font-family:Arial,sans-serif;font-size:12px;color:#5c758a">Enviado por ${sentBy
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")}.</p>`,
+    // "light only": pide a los clientes de correo no invertir los colores en modo oscuro.
+    html:
+      `<!doctype html><html><head><meta charset="utf-8">` +
+      `<meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light">` +
+      `</head><body style="margin:0;background:#ffffff">${html}` +
+      `<p style="font-family:Arial,sans-serif;font-size:12px;color:#5c758a;padding:0 12px">Enviado por ${sentBy
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")}.</p></body></html>`,
   };
 
   try {
