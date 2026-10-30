@@ -2,7 +2,9 @@
 // Configuracion > Correo del mes.
 //
 // Autenticacion: header "Authorization: Bearer <token de sesion de Supabase>" (lo manda la app).
-// Cuerpo: { "month": 0-11 } (por defecto el mes actual)
+// Cuerpo: { "month": 0-11 (por defecto el mes actual), "image": "data:image/png;base64,..." (opcional) }
+// Con "image" (la foto del calendario que toma la app) el correo lleva esa imagen incrustada;
+// sin ella, una tabla HTML con el mismo diseno.
 //
 // Variables de entorno en Vercel (solo servidor, sin prefijo VITE_):
 //   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
@@ -22,16 +24,18 @@ import {
   DEFAULT_OFFICE_DAYS,
   DEFAULT_SHIFTS,
 } from "../src/calendarDefaults.js";
-import { MONTH_NAMES, buildMonthEmail, buildMonthWeeks } from "../src/monthEmail.js";
+import { MONTH_NAMES, buildLegendHtml, buildMonthEmail, buildMonthWeeks } from "../src/monthEmail.js";
 
 const YEAR = 2026;
+const IMAGE_CID = "calendario@guardias-cesa";
+const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 
 function useGraph() {
   return Boolean(process.env.MS_TENANT_ID && process.env.MS_CLIENT_ID && process.env.MS_CLIENT_SECRET);
 }
 
 // Envia con Microsoft Graph como el buzon `from` (flujo client credentials de la app de Azure).
-async function sendWithGraph({ from, to, cc, replyTo, subject, html }) {
+async function sendWithGraph({ from, to, cc, replyTo, subject, html, inlineImage }) {
   const tokenResponse = await fetch(
     `https://login.microsoftonline.com/${process.env.MS_TENANT_ID}/oauth2/v2.0/token`,
     {
@@ -61,6 +65,18 @@ async function sendWithGraph({ from, to, cc, replyTo, subject, html }) {
         toRecipients: recipients(to),
         ccRecipients: recipients(cc),
         replyTo: replyTo ? recipients([replyTo]) : [],
+        attachments: inlineImage
+          ? [
+              {
+                "@odata.type": "#microsoft.graph.fileAttachment",
+                name: "calendario.png",
+                contentType: "image/png",
+                contentBytes: inlineImage.toString("base64"),
+                contentId: IMAGE_CID,
+                isInline: true,
+              },
+            ]
+          : [],
       },
       saveToSentItems: true,
     }),
@@ -71,7 +87,7 @@ async function sendWithGraph({ from, to, cc, replyTo, subject, html }) {
   }
 }
 
-async function sendWithSmtp({ from, to, cc, replyTo, subject, html, text }) {
+async function sendWithSmtp({ from, to, cc, replyTo, subject, html, text, inlineImage }) {
   const port = Number(process.env.SMTP_PORT || 587);
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || "smtp.office365.com",
@@ -79,7 +95,16 @@ async function sendWithSmtp({ from, to, cc, replyTo, subject, html, text }) {
     secure: port === 465,
     auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
   });
-  await transporter.sendMail({ from: { name: "Guardias CESA", address: from }, to, cc, replyTo, subject, text, html });
+  await transporter.sendMail({
+    from: { name: "Guardias CESA", address: from },
+    to,
+    cc,
+    replyTo,
+    subject,
+    text,
+    html,
+    attachments: inlineImage ? [{ filename: "calendario.png", content: inlineImage, cid: IMAGE_CID }] : [],
+  });
 }
 
 function splitAddresses(value) {
@@ -112,6 +137,15 @@ export default async function handler(req, res) {
   const monthIndex = req.body?.month ?? new Date().getMonth();
   if (!Number.isInteger(monthIndex) || monthIndex < 0 || monthIndex > 11) {
     return res.status(400).json({ error: "El mes debe ser un numero de 0 a 11" });
+  }
+
+  let inlineImage = null;
+  if (req.body?.image) {
+    const match = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(req.body.image);
+    inlineImage = match ? Buffer.from(match[1], "base64") : null;
+    if (!inlineImage || inlineImage.length > MAX_IMAGE_BYTES) {
+      return res.status(400).json({ error: "La imagen del calendario no es valida" });
+    }
   }
 
   const from = process.env.MAIL_FROM || process.env.SMTP_USER;
@@ -178,10 +212,19 @@ export default async function handler(req, res) {
     (guard) => (guard.email ?? "").trim().toLowerCase() === userData.user.email?.toLowerCase()
   );
   const title = `Guardias ${MONTH_NAMES[monthIndex]} ${YEAR}`;
-  const { html, text } = buildMonthEmail({ title, monthLabel: `${MONTH_NAMES[monthIndex]} ${YEAR}`, weeks, shifts });
+  const email = buildMonthEmail({ title, monthLabel: `${MONTH_NAMES[monthIndex]} ${YEAR}`, weeks, shifts });
+  const { text } = email;
+  // Con la foto del calendario, el correo es esa imagen (igual a la app) mas la simbologia.
+  const html = inlineImage
+    ? `<div style="background:#ffffff;padding:12px;max-width:760px">` +
+      `<p style="font-family:Arial,sans-serif;font-size:16px;font-weight:bold;color:#16212e;margin:0 0 10px">${title}</p>` +
+      `<img src="cid:${IMAGE_CID}" alt="${title}" width="720" style="display:block;width:100%;max-width:720px;height:auto">` +
+      `${buildLegendHtml()}</div>`
+    : email.html;
   const sentBy = sender?.name ?? userData.user.email;
 
   const message = {
+    inlineImage,
     from,
     to,
     cc,

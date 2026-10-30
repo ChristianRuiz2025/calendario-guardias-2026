@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   CalendarDays,
@@ -415,6 +415,7 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [sendingMail, setSendingMail] = useState(false);
+  const calendarRef = useRef(null);
   const { theme, toggleTheme } = useTheme();
   const schedule = useMemo(
     () => buildSchedule(guards, assignments, shifts, holidays, vacations),
@@ -483,11 +484,28 @@ function App() {
   async function sendMonthEmail() {
     setSendingMail(true);
     let message;
+    // Foto del calendario tal como se ve, para que el correo quede igual. Si falla, el
+    // servidor manda la tabla HTML.
+    let image = null;
+    try {
+      const { toPng } = await import("html-to-image");
+      const { width, height } = calendarRef.current.getBoundingClientRect();
+      image = await toPng(calendarRef.current, {
+        pixelRatio: 2,
+        width: Math.ceil(width),
+        height: Math.ceil(height),
+        // La tabla esta centrada con margin auto; en la foto va pegada a la orilla.
+        style: { margin: "0" },
+        backgroundColor: getComputedStyle(document.body).backgroundColor,
+      });
+    } catch (captureError) {
+      console.error(captureError);
+    }
     try {
       const response = await fetch("/api/enviar-mes", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ month: monthIndex }),
+        body: JSON.stringify({ month: monthIndex, image }),
       });
       const result = await response.json().catch(() => ({}));
       message = response.ok
@@ -678,7 +696,7 @@ function App() {
           ) : null}
 
           <div className="calendar-wrap">
-            <table className="guard-calendar" style={{ "--shift-rows": shifts.length }}>
+            <table className="guard-calendar" ref={calendarRef} style={{ "--shift-rows": shifts.length }}>
               <thead>
                 <tr className="month-row">
                   <th>Entrada</th>

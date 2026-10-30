@@ -174,6 +174,21 @@ function legendItem(swatchStyle, label) {
   );
 }
 
+// Simbologia del calendario (debajo de la tabla o de la imagen).
+export function buildLegendHtml() {
+  return (
+    `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:10px auto 0"><tr>` +
+    legendItem(`border:3px solid ${COLORS.office}`, "Dias de oficina") +
+    legendItem(`border:3px solid ${COLORS.monthEnd}`, "Guardias fin de Mes") +
+    legendItem(`border:3px solid ${COLORS.msClose}`, "Cierre MS") +
+    legendItem(
+      "border:1px solid #5c758a;background-color:#d0d7de;background-image:repeating-linear-gradient(-45deg,#5c758a 0 3px,#ffffff 3px 6px)",
+      "Vacaciones"
+    ) +
+    `</tr></table>`
+  );
+}
+
 // weeks: lo que devuelve buildMonthWeeks. shifts: los turnos ordenados por hora de entrada.
 export function buildMonthEmail({ title, monthLabel, weeks, shifts }) {
   const shiftCount = Math.max(shifts.length, 1);
@@ -257,23 +272,12 @@ export function buildMonthEmail({ title, monthLabel, weeks, shifts }) {
     })
     .join("");
 
-  const legend =
-    `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:10px auto 0"><tr>` +
-    legendItem(`border:3px solid ${COLORS.office}`, "Dias de oficina") +
-    legendItem(`border:3px solid ${COLORS.monthEnd}`, "Guardias fin de Mes") +
-    legendItem(`border:3px solid ${COLORS.msClose}`, "Cierre MS") +
-    legendItem(
-      "border:1px solid #5c758a;background-color:#d0d7de;background-image:repeating-linear-gradient(-45deg,#5c758a 0 3px,#ffffff 3px 6px)",
-      "Vacaciones"
-    ) +
-    `</tr></table>`;
-
   const html =
     `<div style="background:#ffffff;padding:12px;max-width:760px">` +
     `<p style="${FONT};font-size:16px;font-weight:bold;color:#16212e;margin:0 0 10px">${escapeHtml(title)}</p>` +
     `<table cellpadding="0" cellspacing="0" style="width:100%;max-width:720px;border-collapse:collapse;table-layout:fixed">` +
     `<colgroup><col style="width:58px"><col><col><col><col><col><col style="width:110px"></colgroup>` +
-    `<thead>${header}</thead><tbody>${body}</tbody></table>${legend}</div>`;
+    `<thead>${header}</thead><tbody>${body}</tbody></table>${buildLegendHtml()}</div>`;
 
   return { html, text: textLines.join("\n") };
 }

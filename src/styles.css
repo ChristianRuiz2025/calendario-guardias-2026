@@ -440,9 +440,11 @@ p {
 }
 
 /* Bordes de dia de oficina (rojo), fin de mes (verde) y cierre MS (amarillo).
-   Se dibujan en ::after, encima de los turnos. Si un dia tiene varios, el borde
-   se divide en vertical: una parte de cada color. */
+   Se dibujan encima de los turnos: ::before es la mitad izquierda y ::after la derecha,
+   asi un dia con dos marcas queda dividido en vertical, una mitad de cada color. */
+.date-row td::before,
 .date-row td::after,
+.schedule-row td::before,
 .schedule-row td::after {
   content: "";
   position: absolute;
@@ -451,39 +453,49 @@ p {
   border: var(--mark-width) solid transparent;
 }
 
-.date-row td.office-day::after,
-.schedule-row td.office-day::after {
-  border-color: #d92828;
+.date-row td::before,
+.schedule-row td::before {
+  right: 50%;
+  border-color: var(--mark-left, transparent);
+  border-right-width: 0;
 }
 
-.date-row td.month-end-day::after,
-.schedule-row td.month-end-day::after {
-  border-color: #149a4f;
+.date-row td::after,
+.schedule-row td::after {
+  left: 50%;
+  border-color: var(--mark-right, transparent);
+  border-left-width: 0;
 }
 
-.date-row td.ms-close-day::after,
-.schedule-row td.ms-close-day::after {
-  border-color: #e0b400;
+td.office-day {
+  --mark-left: #d92828;
+  --mark-right: #d92828;
 }
 
-.date-row td.office-day.month-end-day::after,
-.schedule-row td.office-day.month-end-day::after {
-  border-image: linear-gradient(to right, #d92828 50%, #149a4f 50%) 1;
+td.month-end-day {
+  --mark-left: #149a4f;
+  --mark-right: #149a4f;
 }
 
-.date-row td.office-day.ms-close-day::after,
-.schedule-row td.office-day.ms-close-day::after {
-  border-image: linear-gradient(to right, #d92828 50%, #e0b400 50%) 1;
+td.ms-close-day {
+  --mark-left: #e0b400;
+  --mark-right: #e0b400;
 }
 
-.date-row td.month-end-day.ms-close-day::after,
-.schedule-row td.month-end-day.ms-close-day::after {
-  border-image: linear-gradient(to right, #149a4f 50%, #e0b400 50%) 1;
+td.office-day.month-end-day {
+  --mark-left: #d92828;
+  --mark-right: #149a4f;
 }
 
-.date-row td.office-day.month-end-day.ms-close-day::after,
-.schedule-row td.office-day.month-end-day.ms-close-day::after {
-  border-image: linear-gradient(to right, #d92828 33.33%, #149a4f 33.33% 66.66%, #e0b400 66.66%) 1;
+td.office-day.ms-close-day,
+td.office-day.month-end-day.ms-close-day {
+  --mark-left: #d92828;
+  --mark-right: #e0b400;
+}
+
+td.month-end-day.ms-close-day {
+  --mark-left: #149a4f;
+  --mark-right: #e0b400;
 }
 
 .date-row td.outside {
