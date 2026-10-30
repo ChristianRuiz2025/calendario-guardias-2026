@@ -76,12 +76,12 @@ export function getDefaultAuditGuard(date, guards, rotations) {
   return findRotationGuard(guardId, guards);
 }
 
-// auditAssignments: { [week_key]: guard_id | null } con lo guardado en Supabase.
+// auditAssignments: { [week_key]: guard_id | null } con lo guardado en la base.
 // rotations: periodos del orden automatico (ver DEFAULT_AUDIT_ROTATIONS).
 export function getAuditGuard(date, guards, auditAssignments, rotations) {
   const key = dateKey(startOfWorkWeek(date));
 
-  // Si la semana tiene un registro en Supabase, ese manda (null = "Sin asignar" explicito).
+  // Si la semana tiene un registro en la base, ese manda (null = "Sin asignar" explicito).
   if (Object.prototype.hasOwnProperty.call(auditAssignments, key)) {
     const assignedGuardId = auditAssignments[key];
     return assignedGuardId ? guards.find((guard) => guard.id === assignedGuardId) ?? null : null;

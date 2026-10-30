@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import "./styles.css";
 import Login from "./Login";
-import { supabase } from "./supabaseClient";
+import { SESSION_EXPIRED_EVENT, apiRequest } from "./apiClient";
 import { useCalendarData } from "./useCalendarData";
 import SettingsModal from "./SettingsModal";
 import VacationPanel from "./VacationPanel";
@@ -411,7 +411,7 @@ function App() {
     removeAuditRotation,
     addVacationDays,
     removeVacationDays,
-  } = useCalendarData();
+  } = useCalendarData(Boolean(session));
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [sendingMail, setSendingMail] = useState(false);
@@ -428,13 +428,21 @@ function App() {
     [guards, auditAssignments, auditRotations]
   );
 
+  // Sesion: undefined mientras se revisa, null sin sesion, { user } con sesion.
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-    });
-    return () => authListener.subscription.unsubscribe();
+    apiRequest("/api/auth")
+      .then(({ user }) => setSession({ user }))
+      .catch(() => setSession(null));
+    const handleExpired = () => setSession(null);
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleExpired);
   }, []);
+
+  function signOut() {
+    apiRequest("/api/auth", { method: "POST", body: { action: "logout" } })
+      .catch((signOutError) => console.error(signOutError))
+      .finally(() => setSession(null));
+  }
 
   function cycleAssignment(dayKey, guardId, currentShiftId) {
     updateAssignment(dayKey, guardId, nextShiftId(currentShiftId, shifts));
@@ -502,17 +510,10 @@ function App() {
       console.error(captureError);
     }
     try {
-      const response = await fetch("/api/enviar-mes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ month: monthIndex, image }),
-      });
-      const result = await response.json().catch(() => ({}));
-      message = response.ok
-        ? `Correo de ${MONTHS[monthIndex]} enviado a ${[...result.para, ...result.cc].join(", ")}.`
-        : result.error ?? "No se pudo enviar el correo.";
-    } catch {
-      message = "No se pudo enviar el correo. Revisa tu conexion.";
+      const result = await apiRequest("/api/enviar-mes", { method: "POST", body: { month: monthIndex, image } });
+      message = `Correo de ${MONTHS[monthIndex]} enviado a ${[...result.para, ...result.cc].join(", ")}.`;
+    } catch (sendError) {
+      message = sendError.message || "No se pudo enviar el correo. Revisa tu conexion.";
     }
     setSendingMail(false);
     setNotice(message);
@@ -528,7 +529,7 @@ function App() {
   }
 
   if (!session) {
-    return <Login />;
+    return <Login onLogin={(user) => setSession({ user })} />;
   }
 
   if (error) {
@@ -568,7 +569,7 @@ function App() {
               </button>
               <button
                 className="icon-button"
-                onClick={() => supabase.auth.signOut()}
+                onClick={signOut}
                 aria-label="Cerrar sesion"
                 title="Cerrar sesion"
               >

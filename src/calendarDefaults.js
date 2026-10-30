@@ -1,4 +1,4 @@
-// Valores por defecto que usan la app y la API mientras no existan sus tablas en Supabase.
+// Valores por defecto que usan la app y la API mientras no haya datos guardados en la base.
 
 // Turnos por defecto. Los ids se guardan en shift_assignments, asi que no cambian
 // aunque se editen los horarios.

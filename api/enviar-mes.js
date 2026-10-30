@@ -1,13 +1,13 @@
 // POST /api/enviar-mes: envia por correo la tabla del mes a los destinatarios de
 // Configuracion > Correo del mes.
 //
-// Autenticacion: header "Authorization: Bearer <token de sesion de Supabase>" (lo manda la app).
+// Autenticacion: la sesion de la app (cookie de /api/auth).
 // Cuerpo: { "month": 0-11 (por defecto el mes actual), "image": "data:image/png;base64,..." (opcional) }
 // Con "image" (la foto del calendario que toma la app) el correo lleva esa imagen incrustada;
 // sin ella, una tabla HTML con el mismo diseno.
 //
 // Variables de entorno en Vercel (solo servidor, sin prefijo VITE_):
-//   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+//   las de MySQL (ver api/_lib/db.js) y SESSION_SECRET
 //   MAIL_FROM  buzon que envia (p. ej. soportecesa@compusoluciones.com)
 // Envio con Microsoft Graph (recomendado para Microsoft 365; app de Azure con permiso Mail.Send):
 //   MS_TENANT_ID, MS_CLIENT_ID, MS_CLIENT_SECRET
@@ -16,10 +16,10 @@
 //   SMTP_HOST, SMTP_PORT  opcionales; por defecto smtp.office365.com y 587
 
 import nodemailer from "nodemailer";
-import { createClient } from "@supabase/supabase-js";
-import { DEFAULT_AUDIT_ROTATIONS, rotationFromRow } from "../src/auditRotation.js";
+import { requireUser } from "./_lib/auth.js";
+import { loadCalendar } from "./_lib/db.js";
+import { rotationFromRow } from "../src/auditRotation.js";
 import {
-  DEFAULT_HOLIDAYS,
   DEFAULT_MS_CLOSE_DAY,
   DEFAULT_OFFICE_DAYS,
   DEFAULT_SHIFTS,
@@ -118,18 +118,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Metodo no permitido" });
   }
 
-  const supabase = createClient(
-    process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-    { auth: { persistSession: false } }
-  );
-
   // Solo alguien con sesion iniciada en la app puede enviar el correo.
-  const header = req.headers.authorization ?? "";
-  const token = header.startsWith("Bearer ") ? header.slice(7) : "";
-  const { data: userData, error: userError } = token ? await supabase.auth.getUser(token) : { data: null };
-  if (userError || !userData?.user) {
-    return res.status(401).json({ error: "No autorizado" });
+  const sessionUser = requireUser(req, res);
+  if (!sessionUser) {
+    return undefined;
   }
 
   const monthIndex = req.body?.month ?? new Date().getMonth();
@@ -153,26 +145,17 @@ export default async function handler(req, res) {
       .json({ error: "Falta configurar el envio de correo en Vercel (MAIL_FROM y Graph, o SMTP_USER y SMTP_PASS)" });
   }
 
-  const [guardsRes, assignmentsRes, auditRes, shiftsRes, holidaysRes, settingsRes, rotationsRes, vacationsRes] =
-    await Promise.all([
-      supabase.from("guards").select("*").order("created_at"),
-      supabase.from("shift_assignments").select("*"),
-      supabase.from("audit_assignments").select("*"),
-      supabase.from("shift_templates").select("*"),
-      supabase.from("holidays").select("*"),
-      supabase.from("app_settings").select("*"),
-      supabase.from("audit_rotations").select("*"),
-      supabase.from("vacations").select("*"),
-    ]);
-
-  if (guardsRes.error || assignmentsRes.error || auditRes.error) {
-    console.error(guardsRes.error ?? assignmentsRes.error ?? auditRes.error);
+  let calendar;
+  try {
+    calendar = await loadCalendar();
+  } catch (dbError) {
+    console.error(dbError);
     return res.status(500).json({ error: "No se pudo leer el calendario" });
   }
 
-  const guards = guardsRes.data;
-  // Igual que en la app: si una tabla opcional no existe se usan los valores por defecto.
-  const setting = (key) => settingsRes.data?.find((row) => row.key === key)?.value;
+  const guards = calendar.guards;
+  // Igual que en la app: si falta un ajuste se usa su valor por defecto.
+  const setting = (key) => calendar.settings.find((row) => row.key === key)?.value;
   // Por defecto lo reciben todas las personas del calendario con correo, mas los adicionales.
   const mailSettings = normalizeMailSettings(setting("mail_recipients"));
   const { to, cc } = resolveRecipients(mailSettings, guards);
@@ -182,8 +165,8 @@ export default async function handler(req, res) {
 
   // Turnos ordenados por hora de entrada, igual que en la app.
   const shifts = (
-    shiftsRes.data?.length
-      ? shiftsRes.data.map((row) => ({ id: row.id, start: row.start_time, end: row.end_time }))
+    calendar.shiftTemplates.length
+      ? calendar.shiftTemplates.map((row) => ({ id: row.id, start: row.start_time, end: row.end_time }))
       : DEFAULT_SHIFTS
   ).sort((a, b) => a.start.localeCompare(b.start) || a.end.localeCompare(b.end));
   const officeDays = setting("office_days");
@@ -196,18 +179,16 @@ export default async function handler(req, res) {
     officeDays: Array.isArray(officeDays) ? officeDays : DEFAULT_OFFICE_DAYS,
     msCloseDay: Number.isInteger(msCloseDay) ? msCloseDay : DEFAULT_MS_CLOSE_DAY,
     assignments: Object.fromEntries(
-      assignmentsRes.data.map((row) => [`${row.day_key}|${row.guard_id}`, row.shift_id])
+      calendar.assignments.map((row) => [`${row.day_key}|${row.guard_id}`, row.shift_id])
     ),
-    holidays: holidaysRes.error
-      ? DEFAULT_HOLIDAYS
-      : Object.fromEntries(holidaysRes.data.map((row) => [row.day_key, row.name ?? ""])),
-    vacations: Object.fromEntries((vacationsRes.data ?? []).map((row) => [`${row.day_key}|${row.guard_id}`, true])),
-    auditAssignments: Object.fromEntries(auditRes.data.map((row) => [row.week_key, row.guard_id])),
-    auditRotations: rotationsRes.error ? DEFAULT_AUDIT_ROTATIONS : rotationsRes.data.map(rotationFromRow),
+    holidays: Object.fromEntries(calendar.holidays.map((row) => [row.day_key, row.name ?? ""])),
+    vacations: Object.fromEntries(calendar.vacations.map((row) => [`${row.day_key}|${row.guard_id}`, true])),
+    auditAssignments: Object.fromEntries(calendar.auditAssignments.map((row) => [row.week_key, row.guard_id])),
+    auditRotations: calendar.auditRotations.map(rotationFromRow),
   });
 
   const sender = guards.find(
-    (guard) => (guard.email ?? "").trim().toLowerCase() === userData.user.email?.toLowerCase()
+    (guard) => (guard.email ?? "").trim().toLowerCase() === sessionUser.email?.toLowerCase()
   );
   const title = renderSubject(mailSettings, MONTH_NAMES[monthIndex], YEAR);
   const intro = mailSettings.message.trim()
@@ -224,14 +205,14 @@ export default async function handler(req, res) {
       `<img src="cid:${IMAGE_CID}" alt="${escapeHtml(title)}" width="720" style="display:block;width:100%;max-width:720px;height:auto">` +
       `${buildLegendHtml()}</div>`
     : email.html;
-  const sentBy = sender?.name ?? userData.user.email;
+  const sentBy = sender?.name ?? sessionUser.email;
 
   const message = {
     inlineImage,
     from,
     to,
     cc,
-    replyTo: userData.user.email,
+    replyTo: sessionUser.email,
     subject: title,
     // Titulo, luego el mensaje y luego el resumen del mes (text ya empieza con el titulo).
     text: [title, mailSettings.message.trim(), text.split("\n").slice(2).join("\n"), `Enviado por ${sentBy}.`]

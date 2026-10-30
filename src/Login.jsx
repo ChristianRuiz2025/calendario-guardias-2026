@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { CalendarDays } from "lucide-react";
-import { supabase } from "./supabaseClient";
+import { apiRequest } from "./apiClient";
 
-export default function Login() {
+// onLogin(user): se llama cuando el servidor acepta el correo y la contrasena.
+export default function Login({ onLogin }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -12,10 +13,13 @@ export default function Login() {
     event.preventDefault();
     setError("");
     setSubmitting(true);
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    setSubmitting(false);
-    if (signInError) {
-      setError("No se pudo iniciar sesion. Revisa tu correo y contrasena.");
+    try {
+      const { user } = await apiRequest("/api/auth", { method: "POST", body: { action: "login", email, password } });
+      onLogin(user);
+    } catch (signInError) {
+      setError(signInError.status === 401 ? "Correo o contrasena incorrectos." : signInError.message);
+    } finally {
+      setSubmitting(false);
     }
   }
 

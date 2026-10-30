@@ -7,12 +7,11 @@
 //   semanas=N         cuantas semanas devolver, de 1 a 52 (por defecto 4)
 //
 // Variables de entorno en Vercel (solo servidor, sin prefijo VITE_):
-//   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, AUDITORIAS_API_KEY
+//   AUDITORIAS_API_KEY y las de MySQL (ver api/_lib/db.js)
 
 import { timingSafeEqual } from "node:crypto";
-import { createClient } from "@supabase/supabase-js";
+import { loadCalendar } from "./_lib/db.js";
 import {
-  DEFAULT_AUDIT_ROTATIONS,
   dateKey,
   getAuditGuard,
   rotationFromRow,
@@ -72,30 +71,17 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: `El parametro 'semanas' debe ser un entero de 1 a ${MAX_WEEKS}` });
   }
 
-  const supabase = createClient(
-    process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-    { auth: { persistSession: false } }
-  );
-
-  const [guardsRes, auditRes, rotationsRes] = await Promise.all([
-    supabase.from("guards").select("id, name").order("created_at"),
-    supabase.from("audit_assignments").select("week_key, guard_id"),
-    supabase.from("audit_rotations").select("*"),
-  ]);
-
-  if (guardsRes.error || auditRes.error) {
-    console.error(guardsRes.error ?? auditRes.error);
+  let calendar;
+  try {
+    calendar = await loadCalendar();
+  } catch (dbError) {
+    console.error(dbError);
     return res.status(500).json({ error: "No se pudo leer el calendario" });
   }
 
-  const guards = guardsRes.data;
-  const auditAssignments = Object.fromEntries(auditRes.data.map((row) => [row.week_key, row.guard_id]));
-  // Sin tabla audit_rotations se usa el orden por defecto, igual que en la app.
-  if (rotationsRes.error) {
-    console.error(rotationsRes.error);
-  }
-  const rotations = rotationsRes.error ? DEFAULT_AUDIT_ROTATIONS : rotationsRes.data.map(rotationFromRow);
+  const guards = calendar.guards;
+  const auditAssignments = Object.fromEntries(calendar.auditAssignments.map((row) => [row.week_key, row.guard_id]));
+  const rotations = calendar.auditRotations.map(rotationFromRow);
   const firstMonday = startOfWorkWeek(from);
 
   const result = Array.from({ length: weeks }, (_, index) => {

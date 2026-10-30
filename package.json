@@ -5,13 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "vite build"
+    "build": "vite build",
+    "crear-usuario": "node scripts/crear-usuario.mjs"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.112.3",
     "@vitejs/plugin-react": "^5.0.0",
+    "aws-ssl-profiles": "^1.1.2",
+    "bcryptjs": "^2.4.3",
     "html-to-image": "^1.11.11",
     "lucide-react": "^0.468.0",
+    "mysql2": "^3.24.6",
     "nodemailer": "^6.10.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
