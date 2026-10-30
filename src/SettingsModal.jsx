@@ -317,7 +317,7 @@ export default function SettingsModal({
                 <h2>Correo del mes</h2>
               </div>
               <p className="settings-hint">
-                A quien va el correo de "Enviar por correo". Separa varios correos con coma.
+                A quien se envia el correo de "Enviar por correo". Separa varios correos con coma.
               </p>
               <div className="mail-fields">
                 <label>

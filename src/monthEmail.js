@@ -1,7 +1,72 @@
-// Arma el resumen del mes para pegarlo en un correo: una tabla HTML con estilos en
+// Arma el correo del mes (lo usa api/enviar-mes.js): una tabla HTML con estilos en
 // linea (los clientes de correo ignoran las hojas de estilo) y una version en texto.
 
+import { dateKey, getAuditGuard, startOfWorkWeek } from "./auditRotation.js";
+
 const WEEKDAYS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"];
+
+export const MONTH_NAMES = [
+  "Enero",
+  "Febrero",
+  "Marzo",
+  "Abril",
+  "Mayo",
+  "Junio",
+  "Julio",
+  "Agosto",
+  "Septiembre",
+  "Octubre",
+  "Noviembre",
+  "Diciembre",
+];
+
+// Semanas (lunes a viernes) que tocan el mes, con lo que hay cada dia, para buildMonthEmail.
+// assignments y vacations usan llaves "YYYY-MM-DD|guardId", igual que en la app.
+export function buildMonthWeeks({
+  year,
+  monthIndex,
+  guards,
+  shifts,
+  assignments,
+  holidays,
+  vacations,
+  auditAssignments,
+  auditRotations,
+}) {
+  const weeks = [];
+  const monday = startOfWorkWeek(new Date(year, monthIndex, 1));
+
+  while (monday.getMonth() === monthIndex || monday < new Date(year, monthIndex, 1)) {
+    const days = Array.from({ length: 5 }, (_, index) => {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + index);
+      const key = dateKey(date);
+      const isHoliday = key in holidays;
+      return {
+        date,
+        inMonth: date.getMonth() === monthIndex,
+        holiday: isHoliday ? holidays[key] : null,
+        shifts: isHoliday
+          ? []
+          : guards
+              .filter((guard) => !vacations[`${key}|${guard.id}`])
+              .map((guard) => {
+                const shift = shifts.find((item) => item.id === assignments[`${key}|${guard.id}`]);
+                return shift ? { guard, start: shift.start, end: shift.end } : null;
+              })
+              .filter(Boolean),
+        vacation: guards.filter((guard) => vacations[`${key}|${guard.id}`]),
+      };
+    });
+
+    if (days.some((day) => day.inMonth)) {
+      weeks.push({ days, auditGuard: getAuditGuard(monday, guards, auditAssignments, auditRotations) });
+    }
+    monday.setDate(monday.getDate() + 7);
+  }
+
+  return weeks;
+}
 
 function escapeHtml(value) {
   return String(value)

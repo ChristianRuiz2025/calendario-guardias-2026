@@ -1,14 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 import { DEFAULT_AUDIT_ROTATIONS, rotationFromRow, rotationToRow } from "./auditRotation";
-
-// Turnos por defecto. Los ids se guardan en shift_assignments, asi que no cambian
-// aunque se editen los horarios.
-export const DEFAULT_SHIFTS = [
-  { id: "08-17", start: "08:00", end: "17:00", position: 0 },
-  { id: "09-18", start: "09:00", end: "18:00", position: 1 },
-  { id: "10-19", start: "10:00", end: "19:00", position: 2 },
-];
+import { DEFAULT_HOLIDAYS, DEFAULT_SHIFTS } from "./calendarDefaults";
 
 // Dias de oficina por defecto (getDay: 1 = lunes ... 5 = viernes).
 export const DEFAULT_OFFICE_DAYS = [2, 5];
@@ -16,21 +9,6 @@ export const DEFAULT_OFFICE_DAYS = [2, 5];
 // Dia del mes del cierre MS (si no es dia habil se recorre al siguiente).
 export const DEFAULT_MS_CLOSE_DAY = 6;
 
-// Feriados por defecto, mientras no exista la tabla holidays.
-const DEFAULT_HOLIDAYS = {
-  "2026-01-01": "Año nuevo",
-  "2026-02-02": "Constitución mexicana",
-  "2026-03-16": "Natalicio de Benito Juárez",
-  "2026-04-02": "Días Santos",
-  "2026-04-03": "Días Santos",
-  "2026-05-01": "Día del trabajo",
-  "2026-09-16": "Independencia de México",
-  "2026-11-16": "Revolución mexicana",
-  "2026-12-12": "Día de la Virgen de Guadalupe",
-  "2026-12-24": "Noche buena",
-  "2026-12-25": "Navidad",
-  "2026-12-31": "Fin de año",
-};
 
 function shiftFromRow(row) {
   return { id: row.id, start: row.start_time, end: row.end_time, position: row.position };

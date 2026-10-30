@@ -17,7 +17,6 @@ import { supabase } from "./supabaseClient";
 import { useCalendarData } from "./useCalendarData";
 import SettingsModal from "./SettingsModal";
 import VacationPanel from "./VacationPanel";
-import { buildMonthEmail } from "./monthEmail";
 import { useTheme } from "./useTheme";
 import { dateKey, getAuditGuard, pad, startOfWorkWeek } from "./auditRotation";
 
@@ -442,6 +441,7 @@ function App() {
   } = useCalendarData();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notice, setNotice] = useState("");
+  const [sendingMail, setSendingMail] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const schedule = useMemo(
     () => buildSchedule(guards, assignments, shifts, holidays, vacations),
@@ -506,68 +506,26 @@ function App() {
     });
   }
 
-  // Copia la tabla del mes al portapapeles y abre un correo nuevo para pegarla.
+  // Envia el correo del mes desde el servidor (api/enviar-mes.js) a los destinatarios de Configuracion.
   async function sendMonthEmail() {
-    const title = `Guardias ${MONTHS[monthIndex]} ${YEAR}`;
-    const { html, text } = buildMonthEmail({
-      title,
-      weeks: monthWeeks.map((week) => ({
-        auditGuard: getAuditGuardForWeek(week, guards, auditAssignments, auditRotations),
-        days: week.map((date) => {
-          const key = dateKey(date);
-          return {
-            date,
-            inMonth: date.getMonth() === monthIndex,
-            holiday: key in holidays ? holidays[key] : null,
-            shifts: schedule[key] ?? [],
-            vacation: guards.filter((guard) => vacations[assignmentKey(key, guard.id)]),
-          };
-        }),
-      })),
-    });
-
-    let copied = true;
+    setSendingMail(true);
+    let message;
     try {
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          "text/html": new Blob([html], { type: "text/html" }),
-          "text/plain": new Blob([text], { type: "text/plain" }),
-        }),
-      ]);
+      const response = await fetch("/api/enviar-mes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ month: monthIndex }),
+      });
+      const result = await response.json().catch(() => ({}));
+      message = response.ok
+        ? `Correo de ${MONTHS[monthIndex]} enviado a ${[...result.para, ...result.cc].join(", ")}.`
+        : result.error ?? "No se pudo enviar el correo.";
     } catch {
-      try {
-        await navigator.clipboard.writeText(text);
-      } catch {
-        copied = false;
-      }
+      message = "No se pudo enviar el correo. Revisa tu conexion.";
     }
-
-    const addresses = (value) =>
-      value
-        .split(/[,;]/)
-        .map((item) => item.trim())
-        .filter(Boolean)
-        .join(",");
-    const params = new URLSearchParams();
-    if (addresses(mailRecipients.cc)) {
-      params.set("cc", addresses(mailRecipients.cc));
-    }
-    params.set("subject", title);
-    params.set(
-      "body",
-      copied
-        ? `Hola, comparto como queda el calendario de ${MONTHS[monthIndex]}:\n\n`
-        : `Hola, comparto como queda el calendario de ${MONTHS[monthIndex]}:\n\n${text}`
-    );
-    // URLSearchParams codifica los espacios como "+", que los clientes de correo no entienden.
-    window.location.href = `mailto:${addresses(mailRecipients.to)}?${params.toString().replace(/\+/g, "%20")}`;
-
-    setNotice(
-      copied
-        ? "Calendario copiado. Pegalo en el correo con Ctrl+V."
-        : "No se pudo copiar la tabla; el correo lleva el resumen en texto."
-    );
-    setTimeout(() => setNotice(""), 8000);
+    setSendingMail(false);
+    setNotice(message);
+    setTimeout(() => setNotice(""), 10000);
   }
 
   if (session === undefined || (session && loading)) {
@@ -731,10 +689,11 @@ function App() {
               <button
                 className="download-button"
                 onClick={sendMonthEmail}
-                title="Copia la tabla del mes y abre un correo para pegarla"
+                disabled={sendingMail}
+                title="Envia la tabla del mes a los destinatarios de Configuracion"
               >
                 <Mail size={18} />
-                Enviar por correo
+                {sendingMail ? "Enviando..." : "Enviar por correo"}
               </button>
             </div>
           </header>
