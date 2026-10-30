@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { ChevronRight, Plus, Trash2, X } from "lucide-react";
 import AuditRotationEditor from "./AuditRotationEditor";
 import MailSettings from "./MailSettings";
+import { dateKey, findRotationGuard } from "./auditRotation";
+import { resolveRecipients } from "./mailSettings";
 
 const YEAR = 2026;
 
@@ -62,6 +64,23 @@ function shiftLabel(shift) {
   return `${hour(shift.start)} a ${hour(shift.end)}`;
 }
 
+// Seccion de Configuracion que se abre y cierra; el resumen se ve aun cerrada.
+function SettingsSection({ title, summary, action, open, onToggle, className = "", children }) {
+  return (
+    <section className={["panel", "settings-section", open ? "open" : "", className].join(" ")}>
+      <div className="settings-section-head">
+        <button type="button" className="settings-section-toggle" onClick={onToggle} aria-expanded={open}>
+          <ChevronRight size={18} className="holiday-chevron" aria-hidden="true" />
+          <h2>{title}</h2>
+          {summary ? <span className="settings-section-summary">{summary}</span> : null}
+        </button>
+        {action}
+      </div>
+      {open ? <div className="settings-section-body">{children}</div> : null}
+    </section>
+  );
+}
+
 export default function SettingsModal({
   guards,
   shifts,
@@ -88,6 +107,36 @@ export default function SettingsModal({
   const [newHolidayDate, setNewHolidayDate] = useState("");
   const [newHolidayName, setNewHolidayName] = useState("");
   const holidayGroups = groupHolidaysByMonth(Object.keys(holidays));
+  const [openSections, setOpenSections] = useState([]);
+  const mailRecipients = resolveRecipients(mailSettings, guards);
+
+  // Todas las secciones empiezan cerradas; se pueden abrir varias a la vez.
+  function section(id) {
+    return {
+      open: openSections.includes(id),
+      onToggle: () =>
+        setOpenSections((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id])),
+    };
+  }
+
+  // Para los botones "+" del encabezado: abre la seccion y luego agrega.
+  function openAnd(id, action) {
+    setOpenSections((current) => (current.includes(id) ? current : [...current, id]));
+    action();
+  }
+
+  // "Abi → Jona → Chris" del orden de auditorias vigente hoy.
+  const today = dateKey(new Date());
+  const activeRotation = [...auditRotations]
+    .filter((rotation) => rotation.start <= today && (!rotation.end || today <= rotation.end))
+    .sort((a, b) => a.start.localeCompare(b.start))
+    .at(-1);
+  const activeRotationSummary = activeRotation
+    ? activeRotation.order
+        .map((entry) => findRotationGuard(entry, guards)?.name)
+        .filter(Boolean)
+        .join(" → ")
+    : "Sin orden vigente";
   const [openMonths, setOpenMonths] = useState([]);
 
   function toggleMonth(month) {
@@ -143,19 +192,21 @@ export default function SettingsModal({
         </header>
 
         <div className="modal-body">
-          <div className="modal-column">
-            <section className="panel">
-              <div className="panel-title">
-                <h2>Guardias</h2>
+            <SettingsSection
+              {...section("guards")}
+              title="Guardias"
+              summary={`${guards.length} ${guards.length === 1 ? "persona" : "personas"}`}
+              action={
                 <button
                   className="icon-button"
-                  onClick={onAddGuard}
+                  onClick={() => openAnd("guards", onAddGuard)}
                   aria-label="Agregar guardia"
                   title="Agregar guardia"
                 >
                   <Plus size={18} />
                 </button>
-              </div>
+              }
+            >
               <p className="settings-hint">El correo liga a cada persona con su inicio de sesion para descargar sus ICS.</p>
               <div className="guard-list">
                 {guards.map((guard) => (
@@ -195,12 +246,17 @@ export default function SettingsModal({
                   </div>
                 ))}
               </div>
-            </section>
+            </SettingsSection>
 
-            <section className="panel">
-              <div className="panel-title">
-                <h2>Dias de oficina</h2>
-              </div>
+            <SettingsSection
+              {...section("office")}
+              title="Dias de oficina"
+              summary={
+                WEEKDAY_OPTIONS.filter((day) => officeDays.includes(day.value))
+                  .map((day) => day.label)
+                  .join(", ") || "Ninguno"
+              }
+            >
               <p className="settings-hint">Se marcan con borde rojo en el calendario.</p>
               <div className="weekday-toggle">
                 {WEEKDAY_OPTIONS.map((day) => (
@@ -215,12 +271,9 @@ export default function SettingsModal({
                   </button>
                 ))}
               </div>
-            </section>
+            </SettingsSection>
 
-            <section className="panel">
-              <div className="panel-title">
-                <h2>Cierres</h2>
-              </div>
+            <SettingsSection {...section("closes")} title="Cierres" summary={`Cierre MS dia ${msCloseDay}`}>
               <div className="close-rule">
                 <span className="legend-swatch month-end" aria-hidden="true" />
                 <div>
@@ -254,29 +307,37 @@ export default function SettingsModal({
                   </p>
                 </div>
               </div>
-            </section>
+            </SettingsSection>
 
-            <section className="panel">
-              <div className="panel-title">
-                <h2>Orden automatico de auditorias</h2>
-              </div>
+            <SettingsSection
+              {...section("audits")}
+              title="Orden automatico de auditorias"
+              summary={activeRotationSummary}
+            >
               <AuditRotationEditor
                 guards={guards}
                 rotations={auditRotations}
                 onSave={onSaveAuditRotation}
                 onRemove={onRemoveAuditRotation}
               />
-            </section>
-          </div>
+            </SettingsSection>
 
-          <div className="modal-column">
-            <section className="panel shift-panel">
-              <div className="panel-title">
-                <h2>Turnos</h2>
-                <button className="icon-button" onClick={onAddShift} aria-label="Agregar turno" title="Agregar turno">
+            <SettingsSection
+              {...section("shifts")}
+              className="shift-panel"
+              title="Turnos"
+              summary={shifts.map(shiftLabel).join(" · ")}
+              action={
+                <button
+                  className="icon-button"
+                  onClick={() => openAnd("shifts", onAddShift)}
+                  aria-label="Agregar turno"
+                  title="Agregar turno"
+                >
                   <Plus size={18} />
                 </button>
-              </div>
+              }
+            >
               <div className="shift-editor shift-editor-head">
                 <span>Entrada</span>
                 <span>Salida</span>
@@ -311,20 +372,22 @@ export default function SettingsModal({
                 Se ordenan por hora de entrada. Los cambios aplican a todos los dias que ya tienen ese turno y a los ICS
                 que se descarguen.
               </p>
-            </section>
+            </SettingsSection>
 
-            <section className="panel">
-              <div className="panel-title">
-                <h2>Correos</h2>
-              </div>
+            <SettingsSection
+              {...section("mail")}
+              title="Correos"
+              summary={mailRecipients.to.length ? `Para ${mailRecipients.to.length} · CC ${mailRecipients.cc.length}` : "Sin destinatarios"}
+            >
               <p className="settings-hint">A quien y como se envia el correo de "Enviar por correo".</p>
               <MailSettings guards={guards} settings={mailSettings} onUpdate={onUpdateMailSettings} />
-            </section>
+            </SettingsSection>
 
-            <section className="panel">
-              <div className="panel-title">
-                <h2>Dias feriados</h2>
-              </div>
+            <SettingsSection
+              {...section("holidays")}
+              title="Dias feriados"
+              summary={`${Object.keys(holidays).length} ${Object.keys(holidays).length === 1 ? "dia" : "dias"}`}
+            >
               <p className="settings-hint">Esos dias no hay guardias y se muestran en dorado.</p>
               <form className="holiday-form" onSubmit={submitHoliday}>
                 <input
@@ -398,8 +461,7 @@ export default function SettingsModal({
                   );
                 })}
               </div>
-            </section>
-          </div>
+            </SettingsSection>
         </div>
       </div>
     </div>
