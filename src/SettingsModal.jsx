@@ -66,6 +66,8 @@ export default function SettingsModal({
   shifts,
   officeDays,
   msCloseDay,
+  mailRecipients,
+  onUpdateMailRecipients,
   holidays,
   onClose,
   onUpdateGuard,
@@ -308,6 +310,33 @@ export default function SettingsModal({
                 Se ordenan por hora de entrada. Los cambios aplican a todos los dias que ya tienen ese turno y a los ICS
                 que se descarguen.
               </p>
+            </section>
+
+            <section className="panel">
+              <div className="panel-title">
+                <h2>Correo del mes</h2>
+              </div>
+              <p className="settings-hint">
+                A quien va el correo de "Enviar por correo". Separa varios correos con coma.
+              </p>
+              <div className="mail-fields">
+                <label>
+                  Para
+                  <input
+                    value={mailRecipients.to}
+                    onChange={(event) => onUpdateMailRecipients("to", event.target.value)}
+                    placeholder="jefe@compusoluciones.com"
+                  />
+                </label>
+                <label>
+                  CC
+                  <input
+                    value={mailRecipients.cc}
+                    onChange={(event) => onUpdateMailRecipients("cc", event.target.value)}
+                    placeholder="Opcional"
+                  />
+                </label>
+              </div>
             </section>
 
             <section className="panel">

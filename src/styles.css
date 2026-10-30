@@ -1379,3 +1379,37 @@ button.rotation-chip:hover {
   color: var(--text);
   background: var(--surface);
 }
+
+.notice {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--surface);
+  font-weight: 700;
+}
+
+.mail-fields {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.mail-fields label {
+  color: var(--muted-strong);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.mail-fields input {
+  display: block;
+  width: 100%;
+  height: 34px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0 8px;
+  color: var(--text-input);
+  background: var(--surface);
+}

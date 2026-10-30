@@ -94,6 +94,8 @@ export function useCalendarData() {
   const [holidays, setHolidays] = useState(DEFAULT_HOLIDAYS);
   const [officeDays, setOfficeDays] = useState(DEFAULT_OFFICE_DAYS);
   const [msCloseDay, setMsCloseDay] = useState(DEFAULT_MS_CLOSE_DAY);
+  // A quien se envia el correo del mes: { to: "a@x.com, b@x.com", cc: "" }
+  const [mailRecipients, setMailRecipients] = useState({ to: "", cc: "" });
   const [auditRotations, setAuditRotations] = useState(DEFAULT_AUDIT_ROTATIONS);
   // Dias de vacaciones: { "YYYY-MM-DD|guardId": true }
   const [vacations, setVacations] = useState({});
@@ -151,6 +153,10 @@ export function useCalendarData() {
       const msCloseDayRow = settingsRes.data?.find((row) => row.key === "ms_close_day");
       if (Number.isInteger(msCloseDayRow?.value)) {
         setMsCloseDay(msCloseDayRow.value);
+      }
+      const mailRecipientsRow = settingsRes.data?.find((row) => row.key === "mail_recipients");
+      if (mailRecipientsRow?.value) {
+        setMailRecipients({ to: mailRecipientsRow.value.to ?? "", cc: mailRecipientsRow.value.cc ?? "" });
       }
       // Sin tabla audit_rotations se usa el orden por defecto.
       logError(rotationsRes.error);
@@ -215,6 +221,9 @@ export function useCalendarData() {
         }
         if (payload.eventType !== "DELETE" && payload.new.key === "ms_close_day" && Number.isInteger(payload.new.value)) {
           setMsCloseDay(payload.new.value);
+        }
+        if (payload.eventType !== "DELETE" && payload.new.key === "mail_recipients" && payload.new.value) {
+          setMailRecipients({ to: payload.new.value.to ?? "", cc: payload.new.value.cc ?? "" });
         }
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "audit_rotations" }, (payload) => {
@@ -368,6 +377,15 @@ export function useCalendarData() {
       .then(({ error: upsertError }) => logError(upsertError));
   }
 
+  function updateMailRecipients(field, value) {
+    const next = { ...mailRecipients, [field]: value };
+    setMailRecipients(next);
+    supabase
+      .from("app_settings")
+      .upsert({ key: "mail_recipients", value: next })
+      .then(({ error: upsertError }) => logError(upsertError));
+  }
+
   function addHoliday(dayKey, name) {
     setHolidays((current) => ({ ...current, [dayKey]: name }));
     supabase
@@ -439,6 +457,7 @@ export function useCalendarData() {
     holidays,
     officeDays,
     msCloseDay,
+    mailRecipients,
     auditRotations,
     vacations,
     loading,
@@ -453,6 +472,7 @@ export function useCalendarData() {
     removeShift,
     updateOfficeDays,
     updateMsCloseDay,
+    updateMailRecipients,
     addHoliday,
     removeHoliday,
     saveAuditRotation,

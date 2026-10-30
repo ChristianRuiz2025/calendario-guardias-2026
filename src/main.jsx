@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Download,
   LogOut,
+  Mail,
   Moon,
   Settings,
   Sun,
@@ -16,6 +17,7 @@ import { supabase } from "./supabaseClient";
 import { useCalendarData } from "./useCalendarData";
 import SettingsModal from "./SettingsModal";
 import VacationPanel from "./VacationPanel";
+import { buildMonthEmail } from "./monthEmail";
 import { useTheme } from "./useTheme";
 import { dateKey, getAuditGuard, pad, startOfWorkWeek } from "./auditRotation";
 
@@ -415,6 +417,7 @@ function App() {
     holidays,
     officeDays,
     msCloseDay,
+    mailRecipients,
     auditRotations,
     vacations,
     loading,
@@ -429,6 +432,7 @@ function App() {
     removeShift,
     updateOfficeDays,
     updateMsCloseDay,
+    updateMailRecipients,
     addHoliday,
     removeHoliday,
     saveAuditRotation,
@@ -437,6 +441,7 @@ function App() {
     removeVacationDays,
   } = useCalendarData();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [notice, setNotice] = useState("");
   const { theme, toggleTheme } = useTheme();
   const schedule = useMemo(
     () => buildSchedule(guards, assignments, shifts, holidays, vacations),
@@ -499,6 +504,70 @@ function App() {
     extraFiles.forEach(([filename, fileContent], index) => {
       setTimeout(() => downloadTextFile(filename, fileContent), 300 * (index + 1));
     });
+  }
+
+  // Copia la tabla del mes al portapapeles y abre un correo nuevo para pegarla.
+  async function sendMonthEmail() {
+    const title = `Guardias ${MONTHS[monthIndex]} ${YEAR}`;
+    const { html, text } = buildMonthEmail({
+      title,
+      weeks: monthWeeks.map((week) => ({
+        auditGuard: getAuditGuardForWeek(week, guards, auditAssignments, auditRotations),
+        days: week.map((date) => {
+          const key = dateKey(date);
+          return {
+            date,
+            inMonth: date.getMonth() === monthIndex,
+            holiday: key in holidays ? holidays[key] : null,
+            shifts: schedule[key] ?? [],
+            vacation: guards.filter((guard) => vacations[assignmentKey(key, guard.id)]),
+          };
+        }),
+      })),
+    });
+
+    let copied = true;
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "text/html": new Blob([html], { type: "text/html" }),
+          "text/plain": new Blob([text], { type: "text/plain" }),
+        }),
+      ]);
+    } catch {
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        copied = false;
+      }
+    }
+
+    const addresses = (value) =>
+      value
+        .split(/[,;]/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .join(",");
+    const params = new URLSearchParams();
+    if (addresses(mailRecipients.cc)) {
+      params.set("cc", addresses(mailRecipients.cc));
+    }
+    params.set("subject", title);
+    params.set(
+      "body",
+      copied
+        ? `Hola, comparto como queda el calendario de ${MONTHS[monthIndex]}:\n\n`
+        : `Hola, comparto como queda el calendario de ${MONTHS[monthIndex]}:\n\n${text}`
+    );
+    // URLSearchParams codifica los espacios como "+", que los clientes de correo no entienden.
+    window.location.href = `mailto:${addresses(mailRecipients.to)}?${params.toString().replace(/\+/g, "%20")}`;
+
+    setNotice(
+      copied
+        ? "Calendario copiado. Pegalo en el correo con Ctrl+V."
+        : "No se pudo copiar la tabla; el correo lleva el resumen en texto."
+    );
+    setTimeout(() => setNotice(""), 8000);
   }
 
   if (session === undefined || (session && loading)) {
@@ -605,6 +674,8 @@ function App() {
             shifts={shifts}
             officeDays={officeDays}
             msCloseDay={msCloseDay}
+            mailRecipients={mailRecipients}
+            onUpdateMailRecipients={updateMailRecipients}
             holidays={holidays}
             onClose={() => setSettingsOpen(false)}
             onUpdateGuard={updateGuard}
@@ -657,8 +728,22 @@ function App() {
                 <Download size={18} />
                 Descargar mes
               </button>
+              <button
+                className="download-button"
+                onClick={sendMonthEmail}
+                title="Copia la tabla del mes y abre un correo para pegarla"
+              >
+                <Mail size={18} />
+                Enviar por correo
+              </button>
             </div>
           </header>
+
+          {notice ? (
+            <p className="notice" role="status">
+              {notice}
+            </p>
+          ) : null}
 
           <div className="calendar-wrap">
             <table className="guard-calendar" style={{ "--shift-rows": shifts.length }}>
