@@ -24,6 +24,7 @@ import {
   DEFAULT_OFFICE_DAYS,
   DEFAULT_SHIFTS,
 } from "../src/calendarDefaults.js";
+import { normalizeMailSettings, renderSubject, resolveRecipients } from "../src/mailSettings.js";
 import { MONTH_NAMES, buildLegendHtml, buildMonthEmail, buildMonthWeeks } from "../src/monthEmail.js";
 
 const YEAR = 2026;
@@ -107,11 +108,8 @@ async function sendWithSmtp({ from, to, cc, replyTo, subject, html, text, inline
   });
 }
 
-function splitAddresses(value) {
-  return String(value ?? "")
-    .split(/[,;]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
+function escapeHtml(value) {
+  return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 export default async function handler(req, res) {
@@ -172,22 +170,22 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "No se pudo leer el calendario" });
   }
 
+  const guards = guardsRes.data;
   // Igual que en la app: si una tabla opcional no existe se usan los valores por defecto.
-  const recipients = settingsRes.data?.find((row) => row.key === "mail_recipients")?.value ?? {};
-  const to = splitAddresses(recipients.to);
-  const cc = splitAddresses(recipients.cc);
+  const setting = (key) => settingsRes.data?.find((row) => row.key === key)?.value;
+  // Por defecto lo reciben todas las personas del calendario con correo, mas los adicionales.
+  const mailSettings = normalizeMailSettings(setting("mail_recipients"));
+  const { to, cc } = resolveRecipients(mailSettings, guards);
   if (to.length === 0) {
-    return res.status(400).json({ error: "Agrega al menos un destinatario en Configuracion > Correo del mes" });
+    return res.status(400).json({ error: "No hay destinatarios. Revisa Configuracion > Correos" });
   }
 
-  const guards = guardsRes.data;
   // Turnos ordenados por hora de entrada, igual que en la app.
   const shifts = (
     shiftsRes.data?.length
       ? shiftsRes.data.map((row) => ({ id: row.id, start: row.start_time, end: row.end_time }))
       : DEFAULT_SHIFTS
   ).sort((a, b) => a.start.localeCompare(b.start) || a.end.localeCompare(b.end));
-  const setting = (key) => settingsRes.data?.find((row) => row.key === key)?.value;
   const officeDays = setting("office_days");
   const msCloseDay = setting("ms_close_day");
   const weeks = buildMonthWeeks({
@@ -211,16 +209,21 @@ export default async function handler(req, res) {
   const sender = guards.find(
     (guard) => (guard.email ?? "").trim().toLowerCase() === userData.user.email?.toLowerCase()
   );
-  const title = `Guardias ${MONTH_NAMES[monthIndex]} ${YEAR}`;
+  const title = renderSubject(mailSettings, MONTH_NAMES[monthIndex], YEAR);
+  const intro = mailSettings.message.trim()
+    ? `<p style="font-family:Arial,sans-serif;font-size:14px;color:#16212e;margin:0 0 12px">` +
+      `${escapeHtml(mailSettings.message.trim()).replace(/\n/g, "<br>")}</p>`
+    : "";
   const email = buildMonthEmail({ title, monthLabel: `${MONTH_NAMES[monthIndex]} ${YEAR}`, weeks, shifts });
   const { text } = email;
   // Con la foto del calendario, el correo es esa imagen (igual a la app) mas la simbologia.
   const html = inlineImage
     ? `<div style="background:#ffffff;padding:12px;max-width:760px">` +
-      `<p style="font-family:Arial,sans-serif;font-size:16px;font-weight:bold;color:#16212e;margin:0 0 10px">${title}</p>` +
-      `<img src="cid:${IMAGE_CID}" alt="${title}" width="720" style="display:block;width:100%;max-width:720px;height:auto">` +
+      intro +
+      `<p style="font-family:Arial,sans-serif;font-size:16px;font-weight:bold;color:#16212e;margin:0 0 10px">${escapeHtml(title)}</p>` +
+      `<img src="cid:${IMAGE_CID}" alt="${escapeHtml(title)}" width="720" style="display:block;width:100%;max-width:720px;height:auto">` +
       `${buildLegendHtml()}</div>`
-    : email.html;
+    : intro + email.html;
   const sentBy = sender?.name ?? userData.user.email;
 
   const message = {
@@ -230,7 +233,7 @@ export default async function handler(req, res) {
     cc,
     replyTo: userData.user.email,
     subject: title,
-    text: `${text}\n\nEnviado por ${sentBy}.`,
+    text: `${mailSettings.message.trim() ? `${mailSettings.message.trim()}\n\n` : ""}${text}\n\nEnviado por ${sentBy}.`,
     // "light only": pide a los clientes de correo no invertir los colores en modo oscuro.
     html:
       `<!doctype html><html><head><meta charset="utf-8">` +

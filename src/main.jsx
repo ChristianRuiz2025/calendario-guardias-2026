@@ -389,7 +389,7 @@ function App() {
     holidays,
     officeDays,
     msCloseDay,
-    mailRecipients,
+    mailSettings,
     auditRotations,
     vacations,
     loading,
@@ -404,7 +404,7 @@ function App() {
     removeShift,
     updateOfficeDays,
     updateMsCloseDay,
-    updateMailRecipients,
+    updateMailSettings,
     addHoliday,
     removeHoliday,
     saveAuditRotation,
@@ -623,8 +623,8 @@ function App() {
             shifts={shifts}
             officeDays={officeDays}
             msCloseDay={msCloseDay}
-            mailRecipients={mailRecipients}
-            onUpdateMailRecipients={updateMailRecipients}
+            mailSettings={mailSettings}
+            onUpdateMailSettings={updateMailSettings}
             holidays={holidays}
             onClose={() => setSettingsOpen(false)}
             onUpdateGuard={updateGuard}
@@ -681,7 +681,7 @@ function App() {
                 className="download-button"
                 onClick={sendMonthEmail}
                 disabled={sendingMail}
-                title="Envia la tabla del mes a los destinatarios de Configuracion"
+                title="Envia el calendario del mes a los destinatarios de Configuracion > Correos"
               >
                 <Mail size={18} />
                 {sendingMail ? "Enviando..." : "Enviar por correo"}

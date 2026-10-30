@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { ChevronRight, Plus, Trash2, X } from "lucide-react";
 import AuditRotationEditor from "./AuditRotationEditor";
+import MailSettings from "./MailSettings";
 
 const YEAR = 2026;
 
@@ -66,8 +67,8 @@ export default function SettingsModal({
   shifts,
   officeDays,
   msCloseDay,
-  mailRecipients,
-  onUpdateMailRecipients,
+  mailSettings,
+  onUpdateMailSettings,
   holidays,
   onClose,
   onUpdateGuard,
@@ -314,29 +315,10 @@ export default function SettingsModal({
 
             <section className="panel">
               <div className="panel-title">
-                <h2>Correo del mes</h2>
+                <h2>Correos</h2>
               </div>
-              <p className="settings-hint">
-                A quien se envia el correo de "Enviar por correo". Separa varios correos con coma.
-              </p>
-              <div className="mail-fields">
-                <label>
-                  Para
-                  <input
-                    value={mailRecipients.to}
-                    onChange={(event) => onUpdateMailRecipients("to", event.target.value)}
-                    placeholder="jefe@compusoluciones.com"
-                  />
-                </label>
-                <label>
-                  CC
-                  <input
-                    value={mailRecipients.cc}
-                    onChange={(event) => onUpdateMailRecipients("cc", event.target.value)}
-                    placeholder="Opcional"
-                  />
-                </label>
-              </div>
+              <p className="settings-hint">A quien y como se envia el correo de "Enviar por correo".</p>
+              <MailSettings guards={guards} settings={mailSettings} onUpdate={onUpdateMailSettings} />
             </section>
 
             <section className="panel">

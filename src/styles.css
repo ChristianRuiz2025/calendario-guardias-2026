@@ -1402,26 +1402,165 @@ button.rotation-chip:hover {
   font-weight: 700;
 }
 
-.mail-fields {
+.mail-settings {
   display: grid;
-  gap: 8px;
+  gap: 14px;
   margin-top: 10px;
 }
 
-.mail-fields label {
-  color: var(--muted-strong);
-  font-size: 0.8rem;
-  font-weight: 700;
+.mail-block {
+  display: grid;
+  gap: 8px;
 }
 
-.mail-fields input {
-  display: block;
+.mail-block h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
+.mail-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mail-guard {
+  display: grid;
+  grid-template-columns: 18px 14px auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  padding: 7px 10px;
+  color: var(--text);
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.mail-guard.disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.mail-guard input {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.mail-swatch {
+  width: 14px;
+  height: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  border-radius: 3px;
+}
+
+.mail-name {
+  font-weight: 800;
+}
+
+.mail-address {
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mail-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 80px 36px;
+  gap: 7px;
+}
+
+.mail-add input,
+.mail-add select,
+.mail-field input,
+.mail-field textarea {
   width: 100%;
+  min-width: 0;
   height: 34px;
-  margin-top: 4px;
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 0 8px;
   color: var(--text-input);
   background: var(--surface);
+  font-size: 0.86rem;
+}
+
+.mail-field textarea {
+  height: auto;
+  padding: 6px 8px;
+  font: inherit;
+  resize: vertical;
+}
+
+.mail-field {
+  display: grid;
+  gap: 4px;
+  color: var(--muted-strong);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.mail-extra {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 30px;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  padding: 5px 6px 5px 10px;
+  font-size: 0.86rem;
+}
+
+.mail-extra .mail-address {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.mail-extra .icon-button {
+  width: 30px;
+  height: 30px;
+}
+
+.mail-type {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.mail-type button {
+  min-width: 44px;
+  height: 28px;
+  border: 0;
+  padding: 0 8px;
+  color: var(--muted-strong);
+  background: var(--surface-2);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.mail-type button.active {
+  color: var(--accent-contrast);
+  background: var(--accent);
+}
+
+.mail-summary {
+  display: grid;
+  gap: 4px;
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: var(--text);
+  background: var(--accent-soft);
+  font-size: 0.84rem;
+  overflow-wrap: anywhere;
+}
+
+.mail-summary.empty {
+  color: var(--danger);
+  background: var(--danger-soft);
+  font-weight: 700;
 }
