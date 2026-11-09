@@ -1,8 +1,8 @@
 // Handler de AWS Lambda para API Gateway HTTP API (payload 2.0), ruta ANY /api/{proxy+}.
 // Variables de la Lambda:
-//   APP_SECRET_ARN  secreto con las variables de la app (ver .env.example)
-//   ORIGIN_VERIFY   valor del header x-origin-verify que agrega CloudFront; las peticiones sin
-//                   el (p. ej. directo a la URL execute-api) se rechazan con 403.
+//   APP_SECRET_ARN  secreto con las variables de la app (ver .env.example). Incluye
+//                   ORIGIN_VERIFY: valor del header x-origin-verify que agrega CloudFront; las
+//                   peticiones sin el (p. ej. directo a la URL execute-api) se rechazan con 403.
 
 import { timingSafeEqual } from "node:crypto";
 import { runHandler } from "./_lib/adapter.js";
@@ -22,6 +22,14 @@ function fromCloudFront(headers) {
 }
 
 export async function handler(event) {
+  // Primero el secreto: de ahi sale ORIGIN_VERIFY (queda en cache por contenedor).
+  try {
+    await loadSecrets();
+  } catch (error) {
+    console.error("No se pudo leer el secreto", error);
+    return reply(500, "Error de configuracion del servidor");
+  }
+
   const headers = { ...(event.headers ?? {}) };
   if (!fromCloudFront(headers)) {
     return reply(403, "Prohibido");
@@ -31,13 +39,6 @@ export async function handler(event) {
   const route = resolveRoute(event.rawPath);
   if (!route) {
     return reply(404, "No encontrado");
-  }
-
-  try {
-    await loadSecrets();
-  } catch (error) {
-    console.error("No se pudo leer el secreto", error);
-    return reply(500, "Error de configuracion del servidor");
   }
 
   // API Gateway separa las cookies del resto de los headers.
