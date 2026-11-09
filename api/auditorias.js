@@ -6,7 +6,7 @@
 //   desde=YYYY-MM-DD  cualquier dia de la primera semana (por defecto, la semana actual en CDMX)
 //   semanas=N         cuantas semanas devolver, de 1 a 52 (por defecto 4)
 //
-// Variables de entorno en Vercel (solo servidor, sin prefijo VITE_):
+// Variables de entorno (solo servidor, sin prefijo VITE_; en AWS vienen del secreto):
 //   AUDITORIAS_API_KEY y las de MySQL (ver api/_lib/db.js)
 
 import { timingSafeEqual } from "node:crypto";

@@ -21,5 +21,9 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "vite": "^7.0.0"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.1165.0",
+    "esbuild": "^0.28.2"
   }
 }

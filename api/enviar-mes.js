@@ -6,7 +6,7 @@
 // Con "image" (la foto del calendario que toma la app) el correo lleva esa imagen incrustada;
 // sin ella, una tabla HTML con el mismo diseno.
 //
-// Variables de entorno en Vercel (solo servidor, sin prefijo VITE_):
+// Variables de entorno (solo servidor, sin prefijo VITE_; en AWS vienen del secreto):
 //   las de MySQL (ver api/_lib/db.js) y SESSION_SECRET
 //   MAIL_FROM  buzon que envia (p. ej. soportecesa@compusoluciones.com)
 // Envio con Microsoft Graph (recomendado para Microsoft 365; app de Azure con permiso Mail.Send):
@@ -142,7 +142,7 @@ export default async function handler(req, res) {
   if (!from || (!useGraph() && !process.env.SMTP_PASS)) {
     return res
       .status(500)
-      .json({ error: "Falta configurar el envio de correo en Vercel (MAIL_FROM y Graph, o SMTP_USER y SMTP_PASS)" });
+      .json({ error: "Falta configurar el envio de correo en el servidor (MAIL_FROM y Graph, o SMTP_USER y SMTP_PASS)" });
   }
 
   let calendar;
