@@ -1,0 +1,37 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "SecretoDeLaApp",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:CreateSecret",
+        "secretsmanager:PutSecretValue",
+        "secretsmanager:UpdateSecret",
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:TagResource"
+      ],
+      "Resource": "arn:aws:secretsmanager:us-east-1:976610556545:secret:calendario-guardias/*"
+    },
+    {
+      "Sid": "LogsDeLaLambda",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:DeleteLogGroup",
+        "logs:PutRetentionPolicy",
+        "logs:DeleteRetentionPolicy",
+        "logs:TagResource",
+        "logs:UntagResource",
+        "logs:ListTagsForResource",
+        "logs:FilterLogEvents",
+        "logs:GetLogEvents"
+      ],
+      "Resource": [
+        "arn:aws:logs:us-east-1:976610556545:log-group:/aws/lambda/calendario-guardias-*",
+        "arn:aws:logs:us-east-1:976610556545:log-group:/aws/lambda/calendario-guardias-*:*"
+      ]
+    }
+  ]
+}
