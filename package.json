@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
+    "dev:api": "node --env-file-if-exists=.env.local scripts/dev-api.mjs",
+    "dev:db": "docker compose up -d --wait",
     "build": "vite build",
     "crear-usuario": "node scripts/crear-usuario.mjs"
   },
