@@ -12,7 +12,6 @@ function aws(...args) {
   return execFileSync("aws", [...args, "--profile", PROFILE, "--region", REGION], {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "inherit"],
-    shell: process.platform === "win32",
   });
 }
 
