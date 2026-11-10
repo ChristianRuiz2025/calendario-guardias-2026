@@ -1,0 +1,121 @@
+# Despliegue en AWS (stage)
+
+La app corre en la cuenta **976610556545** (us-east-1) en un solo stack de SAM, `calendario-guardias-stage`.
+
+**URL:** https://d2eo019m8n7r8o.cloudfront.net
+
+## Arquitectura
+
+```
+Usuario ─► CloudFront (d2eo019m8n7r8o.cloudfront.net)
+             ├─ default  ─► S3 privado (OAC)              index.html + /assets
+             └─ /api/*   ─► API Gateway HTTP API ─► Lambda Node 22 (VPC privada, SG compartido)
+                                                     ├─► RDS db-sicliksuscribe-staging (BD guardias, TLS)
+                                                     ├─► Secrets Manager (vía NAT)
+                                                     └─► SMTP office365 / MS Graph (vía NAT)
+```
+
+| Recurso | Nombre | Notas |
+|---|---|---|
+| Lambda | `calendario-guardias-api-stage` | Node 22, 512 MB, 20 s. Un solo handler (`api/lambda.js`) enruta a los 4 de `api/`. Corre en las subredes `Lambdas-Private-Stage1/2` con el SG `sg-08c7bbe741366e52d` (ya tiene acceso al 3306 de la RDS). |
+| Rol de la Lambda | generado por SAM | `AWSLambdaVPCAccessExecutionRole` + `secretsmanager:GetSecretValue` solo sobre el secreto de la app. |
+| Logs | `/aws/lambda/calendario-guardias-api-stage` | Retención de 30 días. |
+| HTTP API | `calendario-guardias-stage` | Ruta `ANY /api/{proxy+}`, throttling de 10 req/s (ráfagas de 20). Solo acepta peticiones que traen el header `x-origin-verify` de CloudFront; las demás reciben 403. |
+| Bucket | `calendario-guardias-front-stage-976610556545` | Privado, SSE-S3, solo HTTPS, solo lo lee CloudFront. `DeletionPolicy: Retain`. |
+| CloudFront | `E4BSN27UE585I` | `/api/*` sin caché; el resto con `CachingOptimized`. Security headers administrados. |
+| Secreto | `calendario-guardias/stage/app` | JSON con las variables de `.env.example` más `ORIGIN_VERIFY`. |
+| Usuario de BD | `guardias_app` | `SELECT, INSERT, UPDATE, DELETE` sobre `guardias.*`, `REQUIRE SSL`. Script: `mysql/05_usuario_app.sql`. |
+
+Fuera del stack, y sin tocarse: la RDS, la VPC, las subredes, los grupos de seguridad y Route 53.
+
+## Requisitos
+
+- Node 22 y `npm install` en la raíz (instala `esbuild`, que usa `sam build`).
+- AWS CLI v2 y SAM CLI.
+- Perfil `mfa-suscribe-stage` con sesión MFA activa. Además de los permisos de grupo (CloudFormation, Lambda, API Gateway, CloudFront, S3, IAM), el usuario necesita la política `CalendarioGuardiasDeployStage` (`infra/iam/deploy-policy.json`), que da escritura en el secreto y en el log group, y nada más.
+
+Los artefactos de SAM se suben al bucket existente `cf-templates-1ox3hx3s0hofb-us-east-1`, prefijo `calendario-guardias/`. Toda la configuración está en `infra/samconfig.toml`.
+
+## Primera vez (ya hecho en stage)
+
+1. Crear el usuario de BD con `mysql/05_usuario_app.sql`. Lo corre un admin de la RDS; la contraseña es la de `MYSQL_PASSWORD` del secreto. **Nunca** se guarda el archivo con la contraseña en el repo.
+2. Crear el secreto `calendario-guardias/stage/app` con las llaves de `.env.example`, más `MYSQL_SSL=rds` y `ORIGIN_VERIFY` (texto aleatorio, por ejemplo `openssl rand -hex 32`).
+3. Desplegar la API y luego el front (ver abajo).
+
+## Desplegar
+
+**API e infraestructura** (cambios en `api/`, en `src/` que importa `enviar-mes`, o en `infra/`):
+
+```bash
+npm run deploy:api
+```
+
+Construye con esbuild, crea el change set y **pide confirmación** antes de aplicarlo. Para solo revisar el change set sin aplicarlo:
+
+```bash
+cd infra && sam build && sam deploy --no-execute-changeset
+```
+
+**Front** (cambios en `src/`):
+
+```bash
+npm run deploy:front
+```
+
+Hace `vite build`, sube `dist/` al bucket (`assets/` con caché de 1 año e `index.html` sin caché) e invalida `index.html` en CloudFront. Lee el bucket y la distribución de los outputs del stack.
+
+## Cambiar valores del secreto
+
+```bash
+aws secretsmanager put-secret-value --secret-id calendario-guardias/stage/app --secret-string file://secreto.json --profile mfa-suscribe-stage
+```
+
+- La Lambda lee el secreto una vez por contenedor, así que los contenedores que ya están corriendo siguen con el valor viejo hasta que AWS los recicla. Para aplicarlo de inmediato, fuerza contenedores nuevos (el próximo `deploy:api` restablece la descripción):
+
+  ```bash
+  aws lambda update-function-configuration --function-name calendario-guardias-api-stage --description "recarga de secreto" --profile mfa-suscribe-stage
+  ```
+
+- **`ORIGIN_VERIFY`** también lo usa CloudFront, que lo resuelve solo cuando se actualiza el stack. Si se cambia, hay que cambiar algo en la distribución del template y desplegar, o la API responderá 403 a todo. Lo más sencillo es no rotarlo salvo que se haya filtrado.
+- **`SESSION_SECRET`**: al cambiarlo se cierran todas las sesiones.
+
+## Verificar
+
+```bash
+curl -i https://d2eo019m8n7r8o.cloudfront.net/api/auth                        # 401 {"error":"Sin sesion"}
+curl -i -H "Authorization: Bearer <KEY>" "https://d2eo019m8n7r8o.cloudfront.net/api/auditorias?semanas=2"   # 200
+curl -i https://<api-id>.execute-api.us-east-1.amazonaws.com/api/auth         # 403 (solo por CloudFront)
+```
+
+Logs: CloudWatch, log group `/aws/lambda/calendario-guardias-api-stage`. Los errores de BD aparecen como `ER_ACCESS_DENIED_ERROR` (usuario o contraseña) o `ETIMEDOUT` (red o SG).
+
+## Rollback
+
+- **Despliegue fallido:** CloudFormation revierte el stack solo.
+- **Código con errores:** regresa al commit anterior y vuelve a desplegar.
+
+  ```bash
+  git checkout <commit-anterior> -- api src
+  npm run deploy:api && npm run deploy:front
+  ```
+
+- **Quitar todo:**
+
+  ```bash
+  cd infra && sam delete --stack-name calendario-guardias-stage --profile mfa-suscribe-stage
+  ```
+
+  El bucket se conserva (`Retain`): vacíalo y bórralo a mano si ya no se necesita. El secreto y el usuario de BD tampoco son parte del stack.
+
+## Corte desde Vercel
+
+- Quienes consumen `/api/auditorias` deben cambiar a `https://d2eo019m8n7r8o.cloudfront.net/api/auditorias`, con la misma API key.
+- Las sesiones de Vercel no sirven en AWS (otro dominio y otro `SESSION_SECRET`): cada usuario inicia sesión una vez.
+- Dar de baja el proyecto de Vercel después de validar la app en AWS.
+
+## Pendientes conocidos
+
+- La API HTTP no tiene access logs: requieren permisos `logs:*LogDelivery` sobre `*`, que rompen el mínimo privilegio. Los logs de la Lambda sí registran cada error.
+- Los datos de Supabase no se migraron a la RDS. Si se necesitan, están los scripts `mysql/02_*` y `04_*`.
+- `YEAR = 2026` está fijo en `api/enviar-mes.js`.
+- Costo: Lambda, API Gateway y CloudFront quedan prácticamente en la capa gratuita con este uso; el NAT y la RDS ya existían.

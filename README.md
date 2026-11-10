@@ -32,3 +32,12 @@ npm run dev        # Vite en http://localhost:5173 (pasa /api a la API local)
 ```
 
 El usuario de prueba está en `docker/seed.sql`. Para reiniciar la BD: `docker compose down -v && npm run dev:db`.
+
+## Despliegue en AWS
+
+Stack de SAM en `infra/` (S3 + CloudFront + Lambda + API Gateway, con la RDS y Secrets Manager existentes). Requisitos, comandos, cambio de secretos y rollback en [docs/aws-deploy.md](docs/aws-deploy.md).
+
+```bash
+npm run deploy:api     # API e infraestructura (pide confirmar el change set)
+npm run deploy:front   # build y publicación del front
+```
