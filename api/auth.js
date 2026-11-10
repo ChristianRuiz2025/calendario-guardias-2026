@@ -23,7 +23,7 @@ export default async function handler(req, res) {
   }
 
   if (!process.env.SESSION_SECRET) {
-    return res.status(500).json({ error: "Falta configurar SESSION_SECRET en Vercel" });
+    return res.status(500).json({ error: "Falta configurar SESSION_SECRET en el servidor" });
   }
 
   const action = req.body?.action;

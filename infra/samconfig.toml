@@ -1,0 +1,21 @@
+version = 0.1
+
+[default.global.parameters]
+stack_name = "calendario-guardias-stage"
+
+[default.build.parameters]
+template_file = "template.yaml"
+
+[default.validate.parameters]
+lint = true
+
+[default.deploy.parameters]
+region = "us-east-1"
+profile = "mfa-suscribe-stage"
+s3_bucket = "cf-templates-1ox3hx3s0hofb-us-east-1"
+s3_prefix = "calendario-guardias"
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = true
+fail_on_empty_changeset = false
+tags = "Proyecto=calendario-guardias Ambiente=stage"
+parameter_overrides = "SubnetIds=\"subnet-0b09e6fd1732f8fff,subnet-074a3d6ed23e5a3a3\" SecurityGroupId=\"sg-08c7bbe741366e52d\""

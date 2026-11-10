@@ -1,7 +1,7 @@
 // Conexion a MySQL compartida por las funciones de /api (los archivos que empiezan con "_"
-// no se publican como rutas en Vercel).
+// no son rutas; ver api/_lib/routes.js).
 //
-// Variables de entorno en Vercel:
+// Variables de entorno (en AWS vienen del secreto, ver api/_lib/secrets.js):
 //   MYSQL_HOST, MYSQL_PORT (3306), MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE
 //   MYSQL_SSL  "rds" (por defecto: SSL validando el certificado de Amazon RDS), "on" (SSL con
 //              los certificados del sistema) u "off" (sin SSL, solo para pruebas locales)
@@ -32,7 +32,7 @@ export function getPool() {
       database: process.env.MYSQL_DATABASE,
       ssl: sslOptions(),
       charset: "utf8mb4",
-      // Pocas conexiones: cada funcion de Vercel tiene su propio pool.
+      // Pocas conexiones: cada contenedor de Lambda tiene su propio pool.
       connectionLimit: 3,
       dateStrings: true,
     });

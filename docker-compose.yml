@@ -1,0 +1,25 @@
+# BD local para desarrollo: misma version que la RDS de stage (MySQL 5.7).
+# Uso: npm run dev:db   (puerto 3307 en el equipo)
+services:
+  mysql:
+    image: mysql:5.7
+    container_name: guardias-mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: root-local
+      MYSQL_DATABASE: guardias
+      MYSQL_USER: guardias_app
+      MYSQL_PASSWORD: guardias-local
+    ports:
+      - "3307:3306"
+    volumes:
+      - guardias-mysql:/var/lib/mysql
+      - ./mysql/01b_crear_tablas_mysql_sin_llaves_foraneas.sql:/docker-entrypoint-initdb.d/01_tablas.sql:ro
+      - ./docker/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot-local"]
+      interval: 5s
+      retries: 20
+
+volumes:
+  guardias-mysql:

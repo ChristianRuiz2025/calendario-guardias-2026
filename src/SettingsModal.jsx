@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { ChevronRight, Plus, Trash2, X } from "lucide-react";
 import AuditRotationEditor from "./AuditRotationEditor";
-import MailSettings from "./MailSettings";
+import MailSettings from "./MailSettings.jsx";
 import { dateKey, findRotationGuard } from "./auditRotation";
 import { resolveRecipients } from "./mailSettings";
 

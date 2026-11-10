@@ -52,7 +52,7 @@ export function getSessionUser(req) {
 }
 
 function cookieAttributes(req, maxAgeSeconds) {
-  // "Secure" solo con https (en Vercel siempre); asi tambien funciona en pruebas locales.
+  // "Secure" solo con https (en AWS siempre, via CloudFront y API Gateway); asi tambien funciona en pruebas locales.
   const secure = req.headers["x-forwarded-proto"] === "https" ? "; Secure" : "";
   return `; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSeconds}${secure}`;
 }
