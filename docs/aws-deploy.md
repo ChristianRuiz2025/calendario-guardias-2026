@@ -114,6 +114,25 @@ Si se agrega algo que cargue recursos de otro dominio (fuentes, scripts, analít
 
 Para revisar la calificación: https://securityheaders.com/?q=https://d2eo019m8n7r8o.cloudfront.net&followRedirects=on
 
+## Firewall (AWS WAF)
+
+La distribución de CloudFront tiene un web ACL de AWS WAF (`calendario-guardias-stage-waf`, recurso `WebAcl` en `infra/template.yaml`) con tres reglas:
+
+| Prioridad | Regla | Qué hace |
+|---|---|---|
+| 0 | `BloquearTransferEncoding` | Bloquea las peticiones que traen el header `Transfer-Encoding`. La app nunca lo manda (todas sus peticiones llevan `Content-Length`); cerrarlo evita *HTTP request smuggling* entre CloudFront y API Gateway (hallazgo CWE-444 del escaneo de seguridad de TI). |
+| 1 | `AWSManagedRulesCommonRuleSet` | Reglas administradas de AWS contra ataques comunes (XSS, LFI, etc.). `SizeRestrictions_BODY` está en modo *Count*: bloquearía cuerpos de más de 8 KB y `/api/enviar-mes` manda la foto del calendario (~250 KB). |
+| 2 | `AWSManagedRulesKnownBadInputsRuleSet` | Entradas maliciosas conocidas (Log4j, etc.). |
+
+- Las peticiones bloqueadas reciben **403** de CloudFront. Las métricas y muestras de peticiones se ven en la consola de WAF (región *Global (CloudFront)*).
+- Si una regla administrada bloquea algo legítimo de la app, se pasa a *Count* con `RuleActionOverrides` (como `SizeRestrictions_BODY`), en lugar de quitar el grupo completo.
+- Costo aproximado: 5 USD/mes por el web ACL, 1 USD/mes por regla y 0.60 USD por millón de peticiones.
+- El rol de GitHub Actions necesita los permisos `wafv2` de `infra/iam/github-actions-deploy-policy.json`. Al cambiar esa política hay que aplicarla al rol:
+
+  ```bash
+  aws iam put-role-policy --role-name calendario-guardias-github-deploy-stage --policy-name deploy-stage --policy-document file://infra/iam/github-actions-deploy-policy.json --profile mfa-suscribe-stage
+  ```
+
 ## Cambiar valores del secreto
 
 ```bash
