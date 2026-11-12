@@ -133,6 +133,18 @@ La distribución de CloudFront tiene un web ACL de AWS WAF (`calendario-guardias
   aws iam put-role-policy --role-name calendario-guardias-github-deploy-stage --policy-name deploy-stage --policy-document file://infra/iam/github-actions-deploy-policy.json --profile mfa-suscribe-stage
   ```
 
+## Validación de datos y sesiones
+
+- **Validación:** `/api/calendar` solo acepta ids con letras, números, `-` y `_` (UUID o claves como `08-17`), colores `#rrggbb`, y comprueba que la persona y el turno existan antes de guardar. Como las tablas no tienen llaves foráneas, esta validación es la que evita filas huérfanas.
+- **Datos que dejó el escaneo de TI:** `mysql/06_limpiar_datos_invalidos.sql` muestra y borra personas y turnos con ids inválidos y las filas que apuntan a personas o turnos inexistentes. Correr primero la sección *REVISAR*.
+- **Sesiones:** en cada petición se comprueba en `app_users` que el usuario siga existiendo y que su contraseña no haya cambiado. Para sacar a alguien de inmediato:
+  - un usuario: borrarlo de `app_users` o cambiarle la contraseña (`npm run crear-usuario`);
+  - todos: cambiar `SESSION_SECRET` en el secreto.
+
+## Correo desde la Lambda
+
+`/api/enviar-mes` se conecta a `smtp.office365.com:587` (SMTP) o a `graph.microsoft.com:443` (Graph). Si la Lambda no tiene salida a ese puerto, la API responde en unos 8 s con *"No se pudo conectar al servidor de correo (…)"*. Para SMTP hay que permitir **salida TCP 587** desde la Lambda: regla de salida en el SG `sg-08c7bbe741366e52d` (o un SG adicional para la Lambda) y que la NACL de las subredes privadas y el NAT la dejen pasar. Graph usa 443, que ya sale por el NAT (como Secrets Manager).
+
 ## Cambiar valores del secreto
 
 ```bash

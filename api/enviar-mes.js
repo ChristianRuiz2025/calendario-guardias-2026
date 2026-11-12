@@ -35,12 +35,32 @@ function useGraph() {
   return Boolean(process.env.MS_TENANT_ID && process.env.MS_CLIENT_ID && process.env.MS_CLIENT_SECRET);
 }
 
+// Limite para conectar con el servidor de correo: la Lambda tiene 20 s en total, y sin limite un
+// puerto bloqueado la dejaria colgada hasta que AWS la corta, sin decir por que.
+const MAIL_TIMEOUT_MS = 8000;
+
+// Mensaje claro cuando el servidor de correo no responde (p. ej. salida al puerto 587 bloqueada).
+function describeMailError(error) {
+  const host = useGraph()
+    ? "graph.microsoft.com (puerto 443)"
+    : `${process.env.SMTP_HOST || "smtp.office365.com"}:${process.env.SMTP_PORT || 587}`;
+  const code = error?.code ?? error?.cause?.code ?? "";
+  if (
+    ["ETIMEDOUT", "ECONNECTION", "ESOCKET", "ECONNREFUSED", "EHOSTUNREACH", "ENOTFOUND"].includes(code) ||
+    error?.name === "TimeoutError"
+  ) {
+    return `No se pudo conectar al servidor de correo (${host}). El servidor no tiene salida a ese puerto: revisa las reglas de salida de red.`;
+  }
+  return `El servidor de correo rechazo el envio: ${error.message}`;
+}
+
 // Envia con Microsoft Graph como el buzon `from` (flujo client credentials de la app de Azure).
 async function sendWithGraph({ from, to, cc, replyTo, subject, html, inlineImage }) {
   const tokenResponse = await fetch(
     `https://login.microsoftonline.com/${process.env.MS_TENANT_ID}/oauth2/v2.0/token`,
     {
       method: "POST",
+      signal: AbortSignal.timeout(MAIL_TIMEOUT_MS),
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         grant_type: "client_credentials",
@@ -58,6 +78,7 @@ async function sendWithGraph({ from, to, cc, replyTo, subject, html, inlineImage
   const recipients = (addresses) => addresses.map((address) => ({ emailAddress: { address } }));
   const sendResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(from)}/sendMail`, {
     method: "POST",
+    signal: AbortSignal.timeout(MAIL_TIMEOUT_MS),
     headers: { Authorization: `Bearer ${token.access_token}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       message: {
@@ -95,6 +116,9 @@ async function sendWithSmtp({ from, to, cc, replyTo, subject, html, text, inline
     port,
     secure: port === 465,
     auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    connectionTimeout: MAIL_TIMEOUT_MS,
+    greetingTimeout: MAIL_TIMEOUT_MS,
+    socketTimeout: MAIL_TIMEOUT_MS,
   });
   await transporter.sendMail({
     from: { name: "Guardias CESA", address: from },
@@ -119,7 +143,7 @@ export default async function handler(req, res) {
   }
 
   // Solo alguien con sesion iniciada en la app puede enviar el correo.
-  const sessionUser = requireUser(req, res);
+  const sessionUser = await requireUser(req, res);
   if (!sessionUser) {
     return undefined;
   }
@@ -232,7 +256,7 @@ export default async function handler(req, res) {
     await (useGraph() ? sendWithGraph(message) : sendWithSmtp(message));
   } catch (sendError) {
     console.error(sendError);
-    return res.status(502).json({ error: `El servidor de correo rechazo el envio: ${sendError.message}` });
+    return res.status(502).json({ error: describeMailError(sendError) });
   }
 
   return res.status(200).json({ enviado: true, para: to, cc });

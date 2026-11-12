@@ -13,8 +13,13 @@ export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
 
   if (req.method === "GET") {
-    const user = getSessionUser(req);
-    return user ? res.status(200).json({ user }) : res.status(401).json({ error: "Sin sesion" });
+    try {
+      const user = await getSessionUser(req);
+      return user ? res.status(200).json({ user }) : res.status(401).json({ error: "Sin sesion" });
+    } catch (dbError) {
+      console.error(dbError);
+      return res.status(500).json({ error: "No se pudo conectar a la base de datos." });
+    }
   }
 
   if (req.method !== "POST") {
@@ -50,7 +55,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: "Correo o contrasena incorrectos." });
     }
     const user = { id: row.id, email: row.email };
-    setSessionCookie(req, res, user);
+    setSessionCookie(req, res, { ...user, passwordHash: row.password_hash });
     return res.status(200).json({ user });
   } catch (dbError) {
     console.error(dbError);
