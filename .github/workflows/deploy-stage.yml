@@ -1,0 +1,177 @@
+name: Deploy stage
+
+# Redespliega el stack calendario-guardias-stage (AWS) cuando entra a master un cambio de API o de front.
+# Configuracion (rol OIDC, environment y variables): docs/aws-deploy.md, seccion "Despliegue automatico".
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "api/**"
+      - "src/**"
+      - "index.html"
+      - "public/**"
+      - "vite.config.js"
+      - "package.json"
+      - "package-lock.json"
+      - "infra/template.yaml"
+      - "infra/samconfig.toml"
+      - "scripts/deploy-front.mjs"
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Que desplegar
+        type: choice
+        options: [ambos, api, front]
+        default: ambos
+
+permissions:
+  contents: read
+
+# Un despliegue a la vez; si llegan dos merges seguidos, el segundo espera al primero.
+concurrency:
+  group: deploy-stage
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  STACK_NAME: calendario-guardias-stage
+  NODE_VERSION: "22"
+
+jobs:
+  changes:
+    name: Detectar cambios
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.result.outputs.api }}
+      front: ${{ steps.result.outputs.front }}
+    steps:
+      - uses: actions/checkout@v7
+        if: github.event_name == 'push'
+
+      - uses: dorny/paths-filter@v4
+        id: filter
+        if: github.event_name == 'push'
+        with:
+          filters: |
+            api:
+              - "api/**"
+              # La API importa modulos compartidos de src/ (auditRotation, calendarDefaults,
+              # calendarRules, mailSettings, monthEmail); los .jsx son solo del front.
+              - "src/**/*.js"
+              - "infra/template.yaml"
+              - "infra/samconfig.toml"
+              - "package.json"
+              - "package-lock.json"
+            front:
+              - "src/**"
+              - "index.html"
+              - "public/**"
+              - "vite.config.js"
+              - "package.json"
+              - "package-lock.json"
+              - "scripts/deploy-front.mjs"
+
+      - id: result
+        env:
+          EVENT: ${{ github.event_name }}
+          TARGET: ${{ inputs.target }}
+          API: ${{ steps.filter.outputs.api }}
+          FRONT: ${{ steps.filter.outputs.front }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            API=false; FRONT=false
+            [ "$TARGET" != "front" ] && API=true
+            [ "$TARGET" != "api" ] && FRONT=true
+          fi
+          echo "api=${API:-false}" >> "$GITHUB_OUTPUT"
+          echo "front=${FRONT:-false}" >> "$GITHUB_OUTPUT"
+          echo "**API:** ${API:-false} · **Front:** ${FRONT:-false}" >> "$GITHUB_STEP_SUMMARY"
+
+  api:
+    name: API e infraestructura (SAM)
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    environment: stage
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      # sam build hace un npm install de produccion en una copia y busca esbuild (devDependency)
+      # en el PATH: se expone el del proyecto para usar la version del lockfile.
+      - run: npm ci
+      - run: echo "$GITHUB_WORKSPACE/node_modules/.bin" >> "$GITHUB_PATH"
+
+      - uses: aws-actions/setup-sam@v3
+        with:
+          use-installer: true
+          token: ${{ github.token }}
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          role-session-name: gha-api-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: sam build
+        working-directory: infra
+        run: sam build --config-env ci
+
+      - name: sam deploy
+        working-directory: infra
+        run: sam deploy --config-env ci --no-progressbar
+
+      - name: Verificar la API
+        run: |
+          url=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
+            --query "Stacks[0].Outputs[?OutputKey=='AppUrl'].OutputValue" --output text)
+          code=$(curl -s -o /dev/null -w "%{http_code}" "$url/api/auth")
+          echo "GET $url/api/auth -> $code"
+          # Sin sesion, /api/auth responde 401. Un 403 indica problema con ORIGIN_VERIFY; un 500, con el secreto o la BD.
+          if [ "$code" != "401" ]; then
+            echo "::error::Se esperaba 401 de /api/auth y llego $code. Revisa los logs de /aws/lambda/calendario-guardias-api-stage."
+            exit 1
+          fi
+          echo "API desplegada: $url" >> "$GITHUB_STEP_SUMMARY"
+
+  front:
+    name: Front (S3 + CloudFront)
+    needs: [changes, api]
+    # Si tambien cambio la API, el front va despues y solo si la API se desplego bien.
+    if: >-
+      !cancelled() &&
+      needs.changes.outputs.front == 'true' &&
+      (needs.api.result == 'success' || needs.api.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment: stage
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          role-session-name: gha-front-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Publicar en S3 e invalidar CloudFront
+        run: node scripts/deploy-front.mjs | tee -a "$GITHUB_STEP_SUMMARY"

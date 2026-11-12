@@ -64,6 +64,41 @@ npm run deploy:front
 
 Hace `vite build`, sube `dist/` al bucket (`assets/` con caché de 1 año e `index.html` sin caché) e invalida `index.html` en CloudFront. Lee el bucket y la distribución de los outputs del stack.
 
+## Despliegue automático (GitHub Actions)
+
+`.github/workflows/deploy-stage.yml` redespliega en cada push (merge) a `master` según los archivos que cambiaron:
+
+| Job | Se ejecuta si cambia | Qué hace |
+|---|---|---|
+| `api` | `api/**`, `src/**/*.js` (la API importa módulos de `src/`), `infra/template.yaml`, `infra/samconfig.toml`, `package*.json` | `sam build` + `sam deploy --config-env ci` (sin confirmación) y verifica que `/api/auth` responda 401. |
+| `front` | `src/**`, `index.html`, `public/**`, `vite.config.js`, `package*.json`, `scripts/deploy-front.mjs` | `vite build` + `scripts/deploy-front.mjs`. Si también cambió la API, corre después y solo si la API se desplegó bien. |
+
+También se puede lanzar a mano desde *Actions → Deploy stage → Run workflow* eligiendo `ambos`, `api` o `front`. Los despliegues no se empalman (`concurrency`): si llegan dos merges seguidos, el segundo espera.
+
+Las credenciales se obtienen por OIDC; no hay llaves de AWS guardadas en GitHub. Configuración (una sola vez):
+
+1. **Rol en AWS** `calendario-guardias-github-deploy-stage`, que confía en el proveedor OIDC `token.actions.githubusercontent.com` (ya existe en la cuenta) y solo para el environment `stage` de este repo:
+
+   ```bash
+   aws iam create-role --role-name calendario-guardias-github-deploy-stage --assume-role-policy-document file://infra/iam/github-actions-trust-policy.json --max-session-duration 3600 --profile mfa-suscribe-stage
+   aws iam put-role-policy --role-name calendario-guardias-github-deploy-stage --policy-name deploy-stage --policy-document file://infra/iam/github-actions-deploy-policy.json --profile mfa-suscribe-stage
+   ```
+
+   La política (`infra/iam/github-actions-deploy-policy.json`) está acotada a los recursos del stack (Lambda, HTTP API `g1khie5r4g`, distribución `E4BSN27UE585I`, bucket del front, log group, rol de la Lambda y el secreto para `ORIGIN_VERIFY`). Si se recrea alguno de esos recursos con otro ID, hay que actualizarla.
+
+2. **Variables en GitHub** (*Settings → Secrets and variables → Actions → Variables → New repository variable*; son variables, no *Secrets*). Basta con permiso de push en el repo:
+
+   | Variable | Valor |
+   |---|---|
+   | `AWS_DEPLOY_ROLE_ARN` | `arn:aws:iam::976610556545:role/calendario-guardias-github-deploy-stage` |
+   | `AWS_REGION` | `us-east-1` (opcional; es el valor por defecto) |
+
+3. **Environment `stage`**: no hay que crearlo; GitHub lo crea en el primer run porque los jobs lo declaran (`environment: stage`), y la trust policy del rol solo acepta tokens de ese environment. Opcional: el dueño del repo (solo él ve *Settings → Environments*, porque es un repo de cuenta personal) puede limitarlo a *Deployment branches* = `master` y agregar *Required reviewers* para aprobar cada despliegue. Si se definen variables dentro del environment, tienen prioridad sobre las del repositorio.
+
+No se necesitan secretos en GitHub: los de la app viven en Secrets Manager y el front no usa variables `VITE_`.
+
+Si un despliegue falla con `AccessDenied`, el mensaje del paso (o los eventos del stack en CloudFormation) dice qué acción falta; se agrega a la política y se vuelve a lanzar el workflow.
+
 ## Headers de seguridad
 
 CloudFront agrega a todas las respuestas (página y `/api/*`) los headers de `SecurityHeadersPolicy` en `infra/template.yaml`: los de la política administrada de AWS (HSTS, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `X-XSS-Protection`) más:
