@@ -86,14 +86,14 @@ Las credenciales se obtienen por OIDC; no hay llaves de AWS guardadas en GitHub.
 
    La política (`infra/iam/github-actions-deploy-policy.json`) está acotada a los recursos del stack (Lambda, HTTP API `g1khie5r4g`, distribución `E4BSN27UE585I`, bucket del front, log group, rol de la Lambda y el secreto para `ORIGIN_VERIFY`). Si se recrea alguno de esos recursos con otro ID, hay que actualizarla.
 
-2. **Environment `stage` en GitHub** (*Settings → Environments → New environment*). Opcional: *Deployment branches* = solo `master`, y *Required reviewers* si se quiere aprobar cada despliegue.
-
-3. **Variables del environment `stage`** (*Variables*, no *Secrets*):
+2. **Variables en GitHub** (*Settings → Secrets and variables → Actions → Variables → New repository variable*; son variables, no *Secrets*). Basta con permiso de push en el repo:
 
    | Variable | Valor |
    |---|---|
    | `AWS_DEPLOY_ROLE_ARN` | `arn:aws:iam::976610556545:role/calendario-guardias-github-deploy-stage` |
    | `AWS_REGION` | `us-east-1` (opcional; es el valor por defecto) |
+
+3. **Environment `stage`**: no hay que crearlo; GitHub lo crea en el primer run porque los jobs lo declaran (`environment: stage`), y la trust policy del rol solo acepta tokens de ese environment. Opcional: el dueño del repo (solo él ve *Settings → Environments*, porque es un repo de cuenta personal) puede limitarlo a *Deployment branches* = `master` y agregar *Required reviewers* para aprobar cada despliegue. Si se definen variables dentro del environment, tienen prioridad sobre las del repositorio.
 
 No se necesitan secretos en GitHub: los de la app viven en Secrets Manager y el front no usa variables `VITE_`.
 
