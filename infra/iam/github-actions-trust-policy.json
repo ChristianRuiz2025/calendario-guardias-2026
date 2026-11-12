@@ -2,7 +2,7 @@
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "GitHubActionsEnvironmentStage",
+      "Sid": "GitHubActionsRamaMaster",
       "Effect": "Allow",
       "Principal": {
         "Federated": "arn:aws:iam::976610556545:oidc-provider/token.actions.githubusercontent.com"
@@ -11,7 +11,7 @@
       "Condition": {
         "StringEquals": {
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-          "token.actions.githubusercontent.com:sub": "repo:ChristianRuiz2025/calendario-guardias-2026:environment:stage"
+          "token.actions.githubusercontent.com:sub": "repo:ChristianRuiz2025/calendario-guardias-2026:ref:refs/heads/master"
         }
       }
     }
