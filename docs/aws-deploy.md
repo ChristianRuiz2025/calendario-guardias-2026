@@ -22,7 +22,7 @@ Usuario ─► CloudFront (d2eo019m8n7r8o.cloudfront.net)
 | Logs | `/aws/lambda/calendario-guardias-api-stage` | Retención de 30 días. |
 | HTTP API | `calendario-guardias-stage` | Ruta `ANY /api/{proxy+}`, throttling de 10 req/s (ráfagas de 20). Solo acepta peticiones que traen el header `x-origin-verify` de CloudFront; las demás reciben 403. |
 | Bucket | `calendario-guardias-front-stage-976610556545` | Privado, SSE-S3, solo HTTPS, solo lo lee CloudFront. `DeletionPolicy: Retain`. |
-| CloudFront | `E4BSN27UE585I` | `/api/*` sin caché; el resto con `CachingOptimized`. Security headers administrados. |
+| CloudFront | `E4BSN27UE585I` | `/api/*` sin caché; el resto con `CachingOptimized`. Headers de seguridad propios (`SecurityHeadersPolicy`, ver abajo). |
 | Secreto | `calendario-guardias/stage/app` | JSON con las variables de `.env.example` más `ORIGIN_VERIFY`. |
 | Usuario de BD | `guardias_app` | `SELECT, INSERT, UPDATE, DELETE` sobre `guardias.*`, `REQUIRE SSL`. Script: `mysql/05_usuario_app.sql`. |
 
@@ -63,6 +63,17 @@ npm run deploy:front
 ```
 
 Hace `vite build`, sube `dist/` al bucket (`assets/` con caché de 1 año e `index.html` sin caché) e invalida `index.html` en CloudFront. Lee el bucket y la distribución de los outputs del stack.
+
+## Headers de seguridad
+
+CloudFront agrega a todas las respuestas (página y `/api/*`) los headers de `SecurityHeadersPolicy` en `infra/template.yaml`: los de la política administrada de AWS (HSTS, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `X-XSS-Protection`) más:
+
+- **`Content-Security-Policy`**: solo permite recursos del mismo dominio. Excepciones: `style-src 'unsafe-inline'` (estilos en línea de React y de la foto del calendario) e `img-src data: blob:` (la foto del calendario del correo y las descargas ICS).
+- **`Permissions-Policy`**: apaga cámara, micrófono, ubicación, pagos, USB y sensores, que la app no usa.
+
+Si se agrega algo que cargue recursos de otro dominio (fuentes, scripts, analítica, imágenes externas), hay que agregar ese dominio a la directiva correspondiente del `Content-Security-Policy`, o el navegador lo bloqueará. Los bloqueos se ven en la consola del navegador como `Refused to load ...`.
+
+Para revisar la calificación: https://securityheaders.com/?q=https://d2eo019m8n7r8o.cloudfront.net&followRedirects=on
 
 ## Cambiar valores del secreto
 
