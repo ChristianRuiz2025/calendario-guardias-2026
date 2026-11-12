@@ -77,7 +77,7 @@ También se puede lanzar a mano desde *Actions → Deploy stage → Run workflow
 
 Las credenciales se obtienen por OIDC; no hay llaves de AWS guardadas en GitHub. Configuración (una sola vez):
 
-1. **Rol en AWS** `calendario-guardias-github-deploy-stage`, que confía en el proveedor OIDC `token.actions.githubusercontent.com` (ya existe en la cuenta) y solo para la rama `master` de este repo (`repo:ChristianRuiz2025/calendario-guardias-2026:ref:refs/heads/master`):
+1. **Rol en AWS** `calendario-guardias-github-deploy-stage`, que confía en el proveedor OIDC `token.actions.githubusercontent.com` (ya existe en la cuenta) y solo para la rama `master` de este repo (`repo:ChristianRuiz2025@234678067/calendario-guardias-2026@1331263033:ref:refs/heads/master`):
 
    ```bash
    aws iam create-role --role-name calendario-guardias-github-deploy-stage --assume-role-policy-document file://infra/iam/github-actions-trust-policy.json --max-session-duration 3600 --profile mfa-suscribe-stage
@@ -85,6 +85,8 @@ Las credenciales se obtienen por OIDC; no hay llaves de AWS guardadas en GitHub.
    aws iam update-assume-role-policy --role-name calendario-guardias-github-deploy-stage --policy-document file://infra/iam/github-actions-trust-policy.json --profile mfa-suscribe-stage
    aws iam put-role-policy --role-name calendario-guardias-github-deploy-stage --policy-name deploy-stage --policy-document file://infra/iam/github-actions-deploy-policy.json --profile mfa-suscribe-stage
    ```
+
+   El repo usa *subject* inmutable en los tokens OIDC: el `sub` lleva los IDs numéricos del dueño (`@234678067`) y del repo (`@1331263033`), no solo los nombres. Si la trust policy no coincide, el workflow falla con `Not authorized to perform sts:AssumeRoleWithWebIdentity`; el `sub` que llegó se ve en CloudTrail (evento `AssumeRoleWithWebIdentity`, campo `userIdentity.principalId`).
 
    La política (`infra/iam/github-actions-deploy-policy.json`) está acotada a los recursos del stack (Lambda, HTTP API `g1khie5r4g`, distribución `E4BSN27UE585I`, bucket del front, log group, rol de la Lambda y el secreto para `ORIGIN_VERIFY`). Si se recrea alguno de esos recursos con otro ID, hay que actualizarla.
 
