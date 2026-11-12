@@ -77,18 +77,16 @@ También se puede lanzar a mano desde *Actions → Deploy stage → Run workflow
 
 Las credenciales se obtienen por OIDC; no hay llaves de AWS guardadas en GitHub. Configuración (una sola vez):
 
-1. **Rol en AWS** `calendario-guardias-github-deploy-stage`, que confía en el proveedor OIDC `token.actions.githubusercontent.com` (ya existe en la cuenta) y solo para el environment `stage` de este repo:
+1. **Rol en AWS** `calendario-guardias-github-deploy-stage`, que confía en el proveedor OIDC `token.actions.githubusercontent.com` (ya existe en la cuenta) y solo para la rama `master` de este repo (`repo:ChristianRuiz2025@234678067/calendario-guardias-2026@1331263033:ref:refs/heads/master`):
 
    ```bash
    aws iam create-role --role-name calendario-guardias-github-deploy-stage --assume-role-policy-document file://infra/iam/github-actions-trust-policy.json --max-session-duration 3600 --profile mfa-suscribe-stage
+   # Si el rol ya existe, para actualizar solo la confianza:
+   aws iam update-assume-role-policy --role-name calendario-guardias-github-deploy-stage --policy-document file://infra/iam/github-actions-trust-policy.json --profile mfa-suscribe-stage
    aws iam put-role-policy --role-name calendario-guardias-github-deploy-stage --policy-name deploy-stage --policy-document file://infra/iam/github-actions-deploy-policy.json --profile mfa-suscribe-stage
    ```
 
-   El repo usa *subject* inmutable en los tokens OIDC: el `sub` lleva los IDs numéricos del dueño y del repo (`repo:ChristianRuiz2025@234678067/calendario-guardias-2026@1331263033:environment:stage`), no solo los nombres. Si la trust policy no coincide, el workflow falla con `Not authorized to perform sts:AssumeRoleWithWebIdentity`; el `sub` que llegó se ve en CloudTrail (evento `AssumeRoleWithWebIdentity`). Para aplicar cambios a la trust policy de un rol ya creado:
-
-   ```bash
-   aws iam update-assume-role-policy --role-name calendario-guardias-github-deploy-stage --policy-document file://infra/iam/github-actions-trust-policy.json --profile mfa-suscribe-stage
-   ```
+   El repo usa *subject* inmutable en los tokens OIDC: el `sub` lleva los IDs numéricos del dueño (`@234678067`) y del repo (`@1331263033`), no solo los nombres. Si la trust policy no coincide, el workflow falla con `Not authorized to perform sts:AssumeRoleWithWebIdentity`; el `sub` que llegó se ve en CloudTrail (evento `AssumeRoleWithWebIdentity`, campo `userIdentity.principalId`).
 
    La política (`infra/iam/github-actions-deploy-policy.json`) está acotada a los recursos del stack (Lambda, HTTP API `g1khie5r4g`, distribución `E4BSN27UE585I`, bucket del front, log group, rol de la Lambda y el secreto para `ORIGIN_VERIFY`). Si se recrea alguno de esos recursos con otro ID, hay que actualizarla.
 
@@ -99,7 +97,7 @@ Las credenciales se obtienen por OIDC; no hay llaves de AWS guardadas en GitHub.
    | `AWS_DEPLOY_ROLE_ARN` | `arn:aws:iam::976610556545:role/calendario-guardias-github-deploy-stage` |
    | `AWS_REGION` | `us-east-1` (opcional; es el valor por defecto) |
 
-3. **Environment `stage`**: no hay que crearlo; GitHub lo crea en el primer run porque los jobs lo declaran (`environment: stage`), y la trust policy del rol solo acepta tokens de ese environment. Opcional: el dueño del repo (solo él ve *Settings → Environments*, porque es un repo de cuenta personal) puede limitarlo a *Deployment branches* = `master` y agregar *Required reviewers* para aprobar cada despliegue. Si se definen variables dentro del environment, tienen prioridad sobre las del repositorio.
+3. **Sin environment**: los jobs no declaran `environment`, así que no hay aprobación manual; cada merge a `master` se despliega solo. La protección está en la trust policy del rol, que solo acepta tokens de la rama `master` (también los de *Run workflow* lanzado sobre `master`). Un workflow corrido desde otra rama no puede asumir el rol.
 
 No se necesitan secretos en GitHub: los de la app viven en Secrets Manager y el front no usa variables `VITE_`.
 
