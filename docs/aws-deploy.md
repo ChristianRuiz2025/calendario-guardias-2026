@@ -84,6 +84,12 @@ Las credenciales se obtienen por OIDC; no hay llaves de AWS guardadas en GitHub.
    aws iam put-role-policy --role-name calendario-guardias-github-deploy-stage --policy-name deploy-stage --policy-document file://infra/iam/github-actions-deploy-policy.json --profile mfa-suscribe-stage
    ```
 
+   El repo usa *subject* inmutable en los tokens OIDC: el `sub` lleva los IDs numéricos del dueño y del repo (`repo:ChristianRuiz2025@234678067/calendario-guardias-2026@1331263033:environment:stage`), no solo los nombres. Si la trust policy no coincide, el workflow falla con `Not authorized to perform sts:AssumeRoleWithWebIdentity`; el `sub` que llegó se ve en CloudTrail (evento `AssumeRoleWithWebIdentity`). Para aplicar cambios a la trust policy de un rol ya creado:
+
+   ```bash
+   aws iam update-assume-role-policy --role-name calendario-guardias-github-deploy-stage --policy-document file://infra/iam/github-actions-trust-policy.json --profile mfa-suscribe-stage
+   ```
+
    La política (`infra/iam/github-actions-deploy-policy.json`) está acotada a los recursos del stack (Lambda, HTTP API `g1khie5r4g`, distribución `E4BSN27UE585I`, bucket del front, log group, rol de la Lambda y el secreto para `ORIGIN_VERIFY`). Si se recrea alguno de esos recursos con otro ID, hay que actualizarla.
 
 2. **Variables en GitHub** (*Settings → Secrets and variables → Actions → Variables → New repository variable*; son variables, no *Secrets*). Basta con permiso de push en el repo:
