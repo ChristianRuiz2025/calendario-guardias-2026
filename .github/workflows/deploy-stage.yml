@@ -1,8 +1,7 @@
 name: Deploy stage
 
 # Redespliega el stack calendario-guardias-stage (AWS) cuando entra a master un cambio de API o de front.
-# Configuracion (rol OIDC y variables): docs/aws-deploy.md, seccion "Despliegue automatico".
-# Sin environment: el rol de AWS solo confia en la rama master de este repo (ref:refs/heads/master).
+# Configuracion (rol OIDC, environment y variables): docs/aws-deploy.md, seccion "Despliegue automatico".
 
 on:
   push:
@@ -94,6 +93,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
+    environment: stage
     permissions:
       contents: read
       id-token: write
@@ -151,6 +151,7 @@ jobs:
       needs.changes.outputs.front == 'true' &&
       (needs.api.result == 'success' || needs.api.result == 'skipped')
     runs-on: ubuntu-latest
+    environment: stage
     permissions:
       contents: read
       id-token: write
