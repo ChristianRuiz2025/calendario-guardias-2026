@@ -77,10 +77,12 @@ También se puede lanzar a mano desde *Actions → Deploy stage → Run workflow
 
 Las credenciales se obtienen por OIDC; no hay llaves de AWS guardadas en GitHub. Configuración (una sola vez):
 
-1. **Rol en AWS** `calendario-guardias-github-deploy-stage`, que confía en el proveedor OIDC `token.actions.githubusercontent.com` (ya existe en la cuenta) y solo para el environment `stage` de este repo:
+1. **Rol en AWS** `calendario-guardias-github-deploy-stage`, que confía en el proveedor OIDC `token.actions.githubusercontent.com` (ya existe en la cuenta) y solo para la rama `master` de este repo (`repo:ChristianRuiz2025/calendario-guardias-2026:ref:refs/heads/master`):
 
    ```bash
    aws iam create-role --role-name calendario-guardias-github-deploy-stage --assume-role-policy-document file://infra/iam/github-actions-trust-policy.json --max-session-duration 3600 --profile mfa-suscribe-stage
+   # Si el rol ya existe, para actualizar solo la confianza:
+   aws iam update-assume-role-policy --role-name calendario-guardias-github-deploy-stage --policy-document file://infra/iam/github-actions-trust-policy.json --profile mfa-suscribe-stage
    aws iam put-role-policy --role-name calendario-guardias-github-deploy-stage --policy-name deploy-stage --policy-document file://infra/iam/github-actions-deploy-policy.json --profile mfa-suscribe-stage
    ```
 
@@ -93,7 +95,7 @@ Las credenciales se obtienen por OIDC; no hay llaves de AWS guardadas en GitHub.
    | `AWS_DEPLOY_ROLE_ARN` | `arn:aws:iam::976610556545:role/calendario-guardias-github-deploy-stage` |
    | `AWS_REGION` | `us-east-1` (opcional; es el valor por defecto) |
 
-3. **Environment `stage`**: no hay que crearlo; GitHub lo crea en el primer run porque los jobs lo declaran (`environment: stage`), y la trust policy del rol solo acepta tokens de ese environment. Opcional: el dueño del repo (solo él ve *Settings → Environments*, porque es un repo de cuenta personal) puede limitarlo a *Deployment branches* = `master` y agregar *Required reviewers* para aprobar cada despliegue. Si se definen variables dentro del environment, tienen prioridad sobre las del repositorio.
+3. **Sin environment**: los jobs no declaran `environment`, así que no hay aprobación manual; cada merge a `master` se despliega solo. La protección está en la trust policy del rol, que solo acepta tokens de la rama `master` (también los de *Run workflow* lanzado sobre `master`). Un workflow corrido desde otra rama no puede asumir el rol.
 
 No se necesitan secretos en GitHub: los de la app viven en Secrets Manager y el front no usa variables `VITE_`.
 
