@@ -1,15 +1,17 @@
 // Publica dist/ en el bucket del stack e invalida index.html en CloudFront.
 // Uso: npm run deploy:front   (hace el build antes). Perfil: AWS_PROFILE (por defecto mfa-suscribe-stage).
+// Si ya hay credenciales en el entorno (GitHub Actions por OIDC), las usa y no pasa perfil.
 
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 
 const STACK = process.env.STACK_NAME || "calendario-guardias-stage";
-const PROFILE = process.env.AWS_PROFILE || "mfa-suscribe-stage";
+const PROFILE = process.env.AWS_ACCESS_KEY_ID ? null : process.env.AWS_PROFILE || "mfa-suscribe-stage";
 const REGION = process.env.AWS_REGION || "us-east-1";
 
 function aws(...args) {
-  return execFileSync("aws", [...args, "--profile", PROFILE, "--region", REGION], {
+  const profile = PROFILE ? ["--profile", PROFILE] : [];
+  return execFileSync("aws", [...args, ...profile, "--region", REGION], {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "inherit"],
   });
