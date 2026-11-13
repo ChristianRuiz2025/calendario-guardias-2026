@@ -114,6 +114,39 @@ Si se agrega algo que cargue recursos de otro dominio (fuentes, scripts, analít
 
 Para revisar la calificación: https://securityheaders.com/?q=https://d2eo019m8n7r8o.cloudfront.net&followRedirects=on
 
+## Firewall (AWS WAF)
+
+La distribución de CloudFront tiene un web ACL de AWS WAF (`calendario-guardias-stage-waf`, recurso `WebAcl` en `infra/template.yaml`) con cuatro reglas:
+
+| Prioridad | Regla | Qué hace |
+|---|---|---|
+| 0 | `BloquearTransferEncoding` | Bloquea las peticiones que traen el header `Transfer-Encoding`. La app nunca lo manda (todas sus peticiones llevan `Content-Length`); cerrarlo evita *HTTP request smuggling* entre CloudFront y API Gateway (hallazgo CWE-444 del escaneo de seguridad de TI). |
+| 1 | `AWSManagedRulesCommonRuleSet` | Reglas administradas de AWS contra ataques comunes (XSS, LFI, etc.). En modo *Count*: `SizeRestrictions_BODY` (bloquearía cuerpos de más de 8 KB y `/api/enviar-mes` manda la foto del calendario, ~250 KB) y `NoUserAgent_HEADER` (para no cortar integraciones de `/api/auditorias` que no manden `User-Agent`). |
+| 2 | `AWSManagedRulesKnownBadInputsRuleSet` | Entradas maliciosas conocidas (Log4j, etc.). |
+| 3 | `LimitarLogin` | Bloquea una IP que haga más de 100 `POST /api/auth` en 5 minutos (fuerza bruta al login). |
+
+- Las peticiones bloqueadas reciben **403** de CloudFront. Las métricas y muestras de peticiones se ven en la consola de WAF (región *Global (CloudFront)*).
+- Si una regla administrada bloquea algo legítimo de la app, se pasa a *Count* con `RuleActionOverrides` (como `SizeRestrictions_BODY`), en lugar de quitar el grupo completo.
+- Costo aproximado: 5 USD/mes por el web ACL, 1 USD/mes por regla y 0.60 USD por millón de peticiones.
+- El rol de GitHub Actions necesita los permisos `wafv2` de `infra/iam/github-actions-deploy-policy.json`. Al cambiar esa política hay que aplicarla al rol:
+
+  ```bash
+  aws iam put-role-policy --role-name calendario-guardias-github-deploy-stage --policy-name deploy-stage --policy-document file://infra/iam/github-actions-deploy-policy.json --profile mfa-suscribe-stage
+  ```
+
+## Validación de datos y sesiones
+
+- **Validación:** `/api/calendar` solo acepta ids con letras, números, `-` y `_` (UUID o claves como `08-17`), colores `#rrggbb`, y comprueba que la persona y el turno existan antes de guardar. Como las tablas no tienen llaves foráneas, esta validación es la que evita filas huérfanas.
+- **Ajustes:** `office_days` (días 0 a 6), `ms_close_day` (1 a 31) y `mail_recipients` (forma de `src/mailSettings.js`, correos válidos, asunto y mensaje con límite de largo) se validan antes de guardar.
+- **Datos que dejó el escaneo de TI:** `mysql/06_limpiar_datos_invalidos.sql`. Tomar un snapshot de la RDS, correr la sección *REVISAR* (solo `SELECT`), pegar en *BORRAR* los ids confirmados como basura y correrla. Solo los ids con formato inválido se borran sin confirmar.
+- **Sesiones:** la cookie solo lleva el id del usuario, una huella de su contraseña y la expiración. En cada petición se comprueba en `app_users` que el usuario siga existiendo y que su contraseña no haya cambiado. Para sacar a alguien de inmediato:
+  - un usuario: borrarlo de `app_users` o cambiarle la contraseña (`npm run crear-usuario`);
+  - todos: cambiar `SESSION_SECRET` en el secreto.
+
+## Correo desde la Lambda
+
+`/api/enviar-mes` se conecta a `smtp.office365.com:587` (SMTP) o a `graph.microsoft.com:443` (Graph). El envío tiene 12 s en total; si falla, el usuario ve *"No se pudo enviar el correo…"* y el detalle (host, código, respuesta del proveedor) queda en los logs de la Lambda (`Fallo el envio del correo`). Un `TimeoutError` o `ETIMEDOUT` suele indicar que la Lambda no tiene salida a ese puerto. Para SMTP hay que permitir **salida TCP 587** desde la Lambda: regla de salida en el SG `sg-08c7bbe741366e52d` (o un SG adicional para la Lambda) y que la NACL de las subredes privadas y el NAT la dejen pasar. Graph usa 443, que ya sale por el NAT (como Secrets Manager).
+
 ## Cambiar valores del secreto
 
 ```bash

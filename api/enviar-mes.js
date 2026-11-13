@@ -35,12 +35,29 @@ function useGraph() {
   return Boolean(process.env.MS_TENANT_ID && process.env.MS_CLIENT_ID && process.env.MS_CLIENT_SECRET);
 }
 
+// Tiempo total para enviar (conexion, autenticacion y envio): la Lambda tiene 20 s en total, y sin
+// limite un puerto bloqueado la dejaria colgada hasta que AWS la corta, sin decir por que.
+const MAIL_DEADLINE_MS = 12000;
+
+// Al usuario solo un mensaje generico; el detalle (host, codigo, respuesta del proveedor) va al log.
+const MAIL_ERROR = "No se pudo enviar el correo. Intenta mas tarde o avisa al administrador.";
+
+function withDeadline(promise, signal) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+    }),
+  ]);
+}
+
 // Envia con Microsoft Graph como el buzon `from` (flujo client credentials de la app de Azure).
-async function sendWithGraph({ from, to, cc, replyTo, subject, html, inlineImage }) {
+async function sendWithGraph({ from, to, cc, replyTo, subject, html, inlineImage }, signal) {
   const tokenResponse = await fetch(
     `https://login.microsoftonline.com/${process.env.MS_TENANT_ID}/oauth2/v2.0/token`,
     {
       method: "POST",
+      signal,
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         grant_type: "client_credentials",
@@ -58,6 +75,7 @@ async function sendWithGraph({ from, to, cc, replyTo, subject, html, inlineImage
   const recipients = (addresses) => addresses.map((address) => ({ emailAddress: { address } }));
   const sendResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(from)}/sendMail`, {
     method: "POST",
+    signal,
     headers: { Authorization: `Bearer ${token.access_token}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       message: {
@@ -88,15 +106,20 @@ async function sendWithGraph({ from, to, cc, replyTo, subject, html, inlineImage
   }
 }
 
-async function sendWithSmtp({ from, to, cc, replyTo, subject, html, text, inlineImage }) {
+async function sendWithSmtp({ from, to, cc, replyTo, subject, html, text, inlineImage }, signal) {
   const port = Number(process.env.SMTP_PORT || 587);
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || "smtp.office365.com",
     port,
     secure: port === 465,
     auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    connectionTimeout: MAIL_DEADLINE_MS,
+    greetingTimeout: MAIL_DEADLINE_MS,
+    socketTimeout: MAIL_DEADLINE_MS,
   });
-  await transporter.sendMail({
+  // nodemailer no acepta AbortSignal: al vencer el tiempo total se cierra la conexion.
+  signal.addEventListener("abort", () => transporter.close(), { once: true });
+  const sending = transporter.sendMail({
     from: { name: "Guardias CESA", address: from },
     to,
     cc,
@@ -106,6 +129,9 @@ async function sendWithSmtp({ from, to, cc, replyTo, subject, html, text, inline
     html,
     attachments: inlineImage ? [{ filename: "calendario.png", content: inlineImage, cid: IMAGE_CID }] : [],
   });
+  // Si vence el tiempo, el envio termina con error despues; se ignora para que no quede sin atender.
+  sending.catch(() => {});
+  await withDeadline(sending, signal);
 }
 
 function escapeHtml(value) {
@@ -119,7 +145,7 @@ export default async function handler(req, res) {
   }
 
   // Solo alguien con sesion iniciada en la app puede enviar el correo.
-  const sessionUser = requireUser(req, res);
+  const sessionUser = await requireUser(req, res);
   if (!sessionUser) {
     return undefined;
   }
@@ -229,10 +255,11 @@ export default async function handler(req, res) {
   };
 
   try {
-    await (useGraph() ? sendWithGraph(message) : sendWithSmtp(message));
+    const signal = AbortSignal.timeout(MAIL_DEADLINE_MS);
+    await (useGraph() ? sendWithGraph(message, signal) : sendWithSmtp(message, signal));
   } catch (sendError) {
-    console.error(sendError);
-    return res.status(502).json({ error: `El servidor de correo rechazo el envio: ${sendError.message}` });
+    console.error("Fallo el envio del correo:", sendError);
+    return res.status(502).json({ error: MAIL_ERROR });
   }
 
   return res.status(200).json({ enviado: true, para: to, cc });

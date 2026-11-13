@@ -194,6 +194,33 @@
       "Resource": "*"
     },
     {
+      "Sid": "WafDeLaDistribucion",
+      "Effect": "Allow",
+      "Action": [
+        "wafv2:CreateWebACL",
+        "wafv2:UpdateWebACL",
+        "wafv2:DeleteWebACL",
+        "wafv2:GetWebACL",
+        "wafv2:ListTagsForResource",
+        "wafv2:TagResource",
+        "wafv2:UntagResource"
+      ],
+      "Resource": [
+        "arn:aws:wafv2:us-east-1:976610556545:global/webacl/calendario-guardias-stage-waf/*",
+        "arn:aws:wafv2:us-east-1:aws:global/managedruleset/*"
+      ]
+    },
+    {
+      "Sid": "WafLectura",
+      "Effect": "Allow",
+      "Action": [
+        "wafv2:CheckCapacity",
+        "wafv2:ListWebACLs",
+        "wafv2:DescribeManagedRuleGroup"
+      ],
+      "Resource": "*"
+    },
+    {
       "Sid": "LogsDeLaLambda",
       "Effect": "Allow",
       "Action": [
