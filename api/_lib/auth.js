@@ -1,5 +1,5 @@
 // Sesiones de la app: cookie "guardias_session" HttpOnly con un token firmado (HMAC-SHA256)
-// que lleva el id y el correo del usuario. Variable de entorno: SESSION_SECRET (larga y aleatoria).
+// que lleva el id del usuario. Variable de entorno: SESSION_SECRET (larga y aleatoria).
 //
 // En cada peticion se comprueba en app_users que el usuario siga existiendo y que su contrasena
 // no haya cambiado (el token lleva una huella de password_hash). Asi, borrar un usuario o cambiarle
@@ -20,12 +20,11 @@ function passwordVersion(passwordHash) {
   return sign(`pv:${passwordHash}`).slice(0, 22);
 }
 
-// user: { id, email, passwordHash } (passwordHash es app_users.password_hash).
+// user: { id, passwordHash } (passwordHash es app_users.password_hash).
 export function createSessionToken(user) {
   const payload = Buffer.from(
     JSON.stringify({
       id: user.id,
-      email: user.email,
       pv: passwordVersion(user.passwordHash),
       exp: Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000,
     })

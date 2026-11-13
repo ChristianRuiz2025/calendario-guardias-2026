@@ -187,7 +187,9 @@ Resources:
   #   (hallazgo CWE-444 del escaneo de seguridad).
   # - Reglas administradas de AWS: ataques comunes y entradas maliciosas conocidas.
   #   SizeRestrictions_BODY solo cuenta (no bloquea): bloquea cuerpos de mas de 8 KB y
-  #   /api/enviar-mes manda la foto del calendario (~250 KB).
+  #   /api/enviar-mes manda la foto del calendario (~250 KB). NoUserAgent_HEADER tambien solo
+  #   cuenta, para no cortar integraciones de /api/auditorias que no manden User-Agent.
+  # - LimitarLogin: mas de 100 POST a /api/auth en 5 minutos desde una IP se bloquean.
   WebAcl:
     Type: AWS::WAFv2::WebACL
     Properties:
@@ -231,6 +233,9 @@ Resources:
                 - Name: SizeRestrictions_BODY
                   ActionToUse:
                     Count: {}
+                - Name: NoUserAgent_HEADER
+                  ActionToUse:
+                    Count: {}
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
@@ -247,6 +252,38 @@ Resources:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
             MetricName: aws-known-bad-inputs
+        - Name: LimitarLogin
+          Priority: 3
+          Action:
+            Block: {}
+          Statement:
+            RateBasedStatement:
+              Limit: 100
+              EvaluationWindowSec: 300
+              AggregateKeyType: IP
+              ScopeDownStatement:
+                AndStatement:
+                  Statements:
+                    - ByteMatchStatement:
+                        FieldToMatch:
+                          UriPath: {}
+                        PositionalConstraint: EXACTLY
+                        SearchString: /api/auth
+                        TextTransformations:
+                          - Priority: 0
+                            Type: LOWERCASE
+                    - ByteMatchStatement:
+                        FieldToMatch:
+                          Method: {}
+                        PositionalConstraint: EXACTLY
+                        SearchString: POST
+                        TextTransformations:
+                          - Priority: 0
+                            Type: NONE
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: limitar-login
 
   Distribution:
     Type: AWS::CloudFront::Distribution

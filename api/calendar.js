@@ -6,6 +6,7 @@
 import { requireUser } from "./_lib/auth.js";
 import { getPool, loadCalendar } from "./_lib/db.js";
 import { DEFAULT_SHIFTS } from "../src/calendarDefaults.js";
+import { isValidEmail, normalizeMailSettings } from "../src/mailSettings.js";
 
 const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
 const TIME = /^\d{2}:\d{2}$/;
@@ -13,7 +14,6 @@ const TIME = /^\d{2}:\d{2}$/;
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
 const COLOR = /^#[0-9a-fA-F]{6}$/;
 const GUARD_FIELDS = ["name", "initials", "color", "email"];
-const SETTING_KEYS = ["office_days", "ms_close_day", "mail_recipients"];
 
 class BadRequest extends Error {}
 
@@ -80,6 +80,47 @@ function dayKeys(value) {
   }
   return value.map((item) => dayKey(item));
 }
+
+// Ajustes de app_settings: cada uno valida su valor y devuelve lo que se guarda.
+const SETTINGS = {
+  // Dias de la semana (getDay: 0 = domingo ... 6 = sabado).
+  office_days(value) {
+    if (!Array.isArray(value) || value.length > 7 || !value.every((day) => Number.isInteger(day) && day >= 0 && day <= 6)) {
+      throw new BadRequest("Los dias de oficina no son validos");
+    }
+    return [...new Set(value)].sort((a, b) => a - b);
+  },
+
+  ms_close_day(value) {
+    if (!Number.isInteger(value) || value < 1 || value > 31) {
+      throw new BadRequest("El dia de cierre debe ser un numero de 1 a 31");
+    }
+    return value;
+  },
+
+  // Forma de src/mailSettings.js. Se rechaza (en lugar de descartar en silencio) un correo invalido.
+  mail_recipients(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new BadRequest("La configuracion del correo no es valida");
+    }
+    const { excludedGuards = [], extra = [], subject = "", message = "" } = value;
+    if (!Array.isArray(excludedGuards) || excludedGuards.length > 100) {
+      throw new BadRequest("Las personas excluidas no son validas");
+    }
+    excludedGuards.forEach((guardId) => id(guardId, "Una persona excluida"));
+    if (!Array.isArray(extra) || extra.length > 50) {
+      throw new BadRequest("Los destinatarios adicionales no son validos");
+    }
+    for (const item of extra) {
+      if (!isValidEmail(item?.email) || String(item.email).length > 255 || !["to", "cc"].includes(item.type)) {
+        throw new BadRequest("Un destinatario adicional no es valido");
+      }
+    }
+    text(subject, "el asunto", { max: 200, optional: true });
+    text(message, "el mensaje", { max: 2000, optional: true });
+    return normalizeMailSettings({ excludedGuards, extra, subject, message });
+  },
+};
 
 // Cada operacion recibe una conexion (dentro de una transaccion) y el cuerpo de la peticion.
 const OPERATIONS = {
@@ -164,12 +205,13 @@ const OPERATIONS = {
   },
 
   async "setting.set"(db, { key, value }) {
-    if (!SETTING_KEYS.includes(key)) {
+    const validate = SETTINGS[key];
+    if (!validate) {
       throw new BadRequest("Ajuste no valido");
     }
     await db.query(
       "INSERT INTO app_settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)",
-      [key, JSON.stringify(value)]
+      [key, JSON.stringify(validate(value))]
     );
   },
 
