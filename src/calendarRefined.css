@@ -121,7 +121,16 @@
   background: transparent;
 }
 
+/* Dia festivo: la tarjeta queda igual que los demas dias y el aviso va dentro, redondeado
+   como los turnos. */
 .guard-calendar.refined .schedule-row td.holiday {
+  background: var(--surface-2);
+}
+
+.guard-calendar.refined .schedule-row td.holiday .no-class {
+  height: calc(100% - 8px);
+  margin: 4px;
+  border-radius: 6px;
   background: #d9a514;
 }
 
