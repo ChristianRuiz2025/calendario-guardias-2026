@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
-import { LogOut, Moon, MoreVertical, Settings, Sun } from "lucide-react";
+import { LogOut, MoreVertical, Settings } from "lucide-react";
 
-// Menu de tres puntos del encabezado de la barra lateral: tema, Configuracion y Cerrar sesion.
-export default function SidebarMenu({ theme, onToggleTheme, onOpenSettings, onSignOut }) {
+// Menu de tres puntos del encabezado de la barra lateral: Configuracion y Cerrar sesion
+// (el modo claro u oscuro esta en Configuracion > Apariencia).
+export default function SidebarMenu({ onOpenSettings, onSignOut }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -49,10 +50,6 @@ export default function SidebarMenu({ theme, onToggleTheme, onOpenSettings, onSi
       </button>
       {open ? (
         <div className="sidebar-menu-list" role="menu">
-          <button type="button" role="menuitem" onClick={() => choose(onToggleTheme)}>
-            {theme === "dark" ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />}
-            {theme === "dark" ? "Modo claro" : "Modo oscuro"}
-          </button>
           <button type="button" role="menuitem" onClick={() => choose(onOpenSettings)}>
             <Settings size={16} aria-hidden="true" />
             Configuracion

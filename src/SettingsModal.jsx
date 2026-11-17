@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import {
   Building2,
+  Monitor,
+  Moon,
+  Sun,
   CalendarClock,
   ChevronRight,
   Clock,
@@ -43,8 +46,7 @@ const MONTH_NAMES = [
   "Diciembre",
 ];
 
-// Azul predeterminado de la app (el --accent de styles.css).
-const DEFAULT_ACCENT = "#236996";
+const THEME_LABELS = { system: "Automatico", light: "Claro", dark: "Oscuro" };
 
 const WEEKDAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
@@ -148,8 +150,8 @@ export default function SettingsModal({
   auditRotations,
   onSaveAuditRotation,
   onRemoveAuditRotation,
-  accentMode,
-  onUpdateAccentMode,
+  themeMode,
+  onUpdateThemeMode,
   styleMode,
   onUpdateStyleMode,
   currentGuard,
@@ -230,15 +232,16 @@ export default function SettingsModal({
   return (
     <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <div className="modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
-        <header className="modal-header">
-          <h2 id="settings-title">Configuracion</h2>
-          <button className="icon-button" onClick={onClose} aria-label="Cerrar" title="Cerrar">
-            <X size={18} />
-          </button>
-        </header>
+        {/* Sin barra arriba: el titulo va en el menu lateral y la X en la esquina. */}
+        <button className="icon-button settings-close" onClick={onClose} aria-label="Cerrar" title="Cerrar">
+          <X size={18} />
+        </button>
 
         <div className="settings-layout">
           <nav className="settings-nav" aria-label="Secciones de configuracion">
+            <h2 id="settings-title" className="settings-nav-title">
+              Configuracion
+            </h2>
             {NAV_GROUPS.map((group) => (
               <div className="settings-nav-group" key={group.label}>
                 <p className="settings-nav-label">{group.label}</p>
@@ -262,9 +265,7 @@ export default function SettingsModal({
             <SettingsSection
               {...section("appearance")}
               title="Apariencia"
-              summary={`${styleMode === "cristal" ? "Cristal" : "Clasico"} · ${
-                accentMode === "profile" && currentGuard ? "Color de mi perfil" : "Azul predeterminado"
-              }`}
+              summary={`${styleMode === "cristal" ? "Cristal" : "Clasico"} · ${THEME_LABELS[themeMode]}`}
             >
               <p className="settings-subtitle">Estilo</p>
               <div className="accent-options" role="radiogroup" aria-label="Estilo de la aplicacion">
@@ -296,42 +297,28 @@ export default function SettingsModal({
                 </button>
               </div>
 
-              <p className="settings-subtitle">Color</p>
-              <p className="settings-hint">Color de botones y detalles. El estilo y el color se guardan solo en este navegador.</p>
-              <div className="accent-options" role="radiogroup" aria-label="Color de la aplicacion">
-                <button
-                  type="button"
-                  role="radio"
-                  className={accentMode === "default" ? "active" : ""}
-                  aria-checked={accentMode === "default"}
-                  onClick={() => onUpdateAccentMode("default")}
-                >
-                  <span className="accent-swatch" style={{ background: DEFAULT_ACCENT }} aria-hidden="true" />
-                  <span className="accent-option-text">
-                    <strong>Azul predeterminado</strong>
-                    <span>El color original de la app</span>
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  role="radio"
-                  className={accentMode === "profile" ? "active" : ""}
-                  aria-checked={accentMode === "profile"}
-                  onClick={() => onUpdateAccentMode("profile")}
-                  disabled={!currentGuard}
-                  title={currentGuard ? undefined : "Liga tu correo en Guardias para usar tu color"}
-                >
-                  <span
-                    className="accent-swatch"
-                    style={{ background: currentGuard?.color ?? "var(--border)" }}
-                    aria-hidden="true"
-                  />
-                  <span className="accent-option-text">
-                    <strong>Color de mi perfil</strong>
-                    <span>{currentGuard ? `El color de ${currentGuard.name} en Guardias` : "Tu correo no esta ligado"}</span>
-                  </span>
-                </button>
+              <p className="settings-subtitle">Tema</p>
+              <div className="theme-options" role="radiogroup" aria-label="Modo claro u oscuro">
+                {[
+                  { id: "system", icon: Monitor, hint: "Igual que tu equipo" },
+                  { id: "light", icon: Sun, hint: "Fondo claro" },
+                  { id: "dark", icon: Moon, hint: "Fondo oscuro" },
+                ].map(({ id, icon: Icon, hint }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="radio"
+                    className={themeMode === id ? "active" : ""}
+                    aria-checked={themeMode === id}
+                    onClick={() => onUpdateThemeMode(id)}
+                  >
+                    <Icon size={18} aria-hidden="true" />
+                    <strong>{THEME_LABELS[id]}</strong>
+                    <span>{hint}</span>
+                  </button>
+                ))}
               </div>
+              <p className="settings-hint">El estilo y el tema se guardan solo en este navegador.</p>
             </SettingsSection>
 
             <SettingsSection

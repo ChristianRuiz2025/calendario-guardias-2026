@@ -16,7 +16,7 @@ import SidebarMenu from "./SidebarMenu";
 import logoForEmail from "./assets/siclik-cesa.png";
 import LunchPanel from "./LunchPanel";
 import DownloadOptions, { useIcsKinds } from "./DownloadOptions";
-import { useAccentMode, useStyleMode, useTheme } from "./useTheme";
+import { useStyleMode, useTheme } from "./useTheme";
 import { buildCloseDays, isWorkingDay } from "./calendarRules";
 import { dateKey, getAuditGuard, pad, startOfWorkWeek } from "./auditRotation";
 
@@ -469,8 +469,7 @@ function App() {
   const [notice, setNotice] = useState("");
   const [sendingMail, setSendingMail] = useState(false);
   const calendarRef = useRef(null);
-  const { theme, toggleTheme } = useTheme();
-  const { accentMode, setAccentMode } = useAccentMode();
+  const { themeMode, setThemeMode } = useTheme();
   const { styleMode, setStyleMode } = useStyleMode();
   const { kinds: icsKinds, toggleKind: toggleIcsKind } = useIcsKinds();
   const schedule = useMemo(
@@ -511,8 +510,8 @@ function App() {
     : undefined;
 
   useEffect(() => {
-    applyAccentColor(accentMode === "profile" ? currentGuard?.color : undefined);
-  }, [accentMode, currentGuard?.color]);
+    applyAccentColor(currentGuard?.color);
+  }, [currentGuard?.color]);
 
   // Descarga los ICS del mes marcados en "Descargar ICS" (turnos, vacaciones, comidas y
   // auditorias) de la persona que inicio sesion. Los que no tienen eventos no se bajan.
@@ -651,8 +650,6 @@ function App() {
               <p>{currentGuard ? currentGuard.name : "Siclik CESA"}</p>
             </div>
             <SidebarMenu
-              theme={theme}
-              onToggleTheme={toggleTheme}
               onOpenSettings={() => setSettingsOpen(true)}
               onSignOut={signOut}
             />
@@ -764,10 +761,10 @@ function App() {
             auditRotations={auditRotations}
             onSaveAuditRotation={saveAuditRotation}
             onRemoveAuditRotation={removeAuditRotation}
-            accentMode={accentMode}
+            themeMode={themeMode}
             styleMode={styleMode}
             onUpdateStyleMode={setStyleMode}
-            onUpdateAccentMode={setAccentMode}
+            onUpdateThemeMode={setThemeMode}
             currentGuard={currentGuard}
           />
         ) : null}
