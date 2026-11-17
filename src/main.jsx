@@ -808,7 +808,8 @@ function App() {
             ) : null}
 
             <div className="calendar-wrap">
-              <table className="guard-calendar refined" ref={calendarRef} style={{ "--shift-rows": shifts.length }}>
+              <table className="guard-calendar refined" ref={calendarRef} style={{ "--shift-rows": shifts.length, "--weeks": monthWeeks.length }}
+              >
                 <thead>
                   <tr className="month-row">
                     <th>Entrada</th>
