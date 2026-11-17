@@ -49,6 +49,8 @@ export function useCalendarData(enabled) {
   const [auditRotations, setAuditRotations] = useState(DEFAULT_AUDIT_ROTATIONS);
   // Dias de vacaciones: { "YYYY-MM-DD|guardId": true }
   const [vacations, setVacations] = useState({});
+  // Horas de comida: { "YYYY-MM|guardId" (todo el mes) o "YYYY-MM-DD|guardId" (un dia): { start, end } }
+  const [lunches, setLunches] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -71,6 +73,14 @@ export function useCalendarData(enabled) {
     setMailSettings(normalizeMailSettings(setting("mail_recipients")));
     setAuditRotations(data.auditRotations.map(rotationFromRow));
     setVacations(Object.fromEntries(data.vacations.map((row) => [assignmentKey(row.day_key, row.guard_id), true])));
+    setLunches(
+      Object.fromEntries(
+        (data.lunches ?? []).map((row) => [
+          assignmentKey(row.period_key, row.guard_id),
+          { start: row.start_time, end: row.end_time },
+        ])
+      )
+    );
   }
 
   async function reload() {
@@ -171,6 +181,7 @@ export function useCalendarData(enabled) {
     );
     setAuditAssignments((current) => Object.fromEntries(Object.entries(current).filter(([, value]) => value !== id)));
     setVacations((current) => Object.fromEntries(Object.entries(current).filter(([key]) => !key.endsWith(`|${id}`))));
+    setLunches((current) => Object.fromEntries(Object.entries(current).filter(([key]) => !key.endsWith(`|${id}`))));
     save("guard.remove", { id });
   }
 
@@ -268,6 +279,21 @@ export function useCalendarData(enabled) {
     save("vacation.remove", { guardId, dayKeys });
   }
 
+  // periodKey: "YYYY-MM" para todo el mes o "YYYY-MM-DD" para un dia.
+  function setLunch(guardId, periodKey, start, end) {
+    setLunches((current) => ({ ...current, [assignmentKey(periodKey, guardId)]: { start, end } }));
+    save("lunch.set", { guardId, periodKey, start, end });
+  }
+
+  function removeLunch(guardId, periodKey) {
+    setLunches((current) => {
+      const next = { ...current };
+      delete next[assignmentKey(periodKey, guardId)];
+      return next;
+    });
+    save("lunch.remove", { guardId, periodKey });
+  }
+
   function saveAuditRotation(rotation) {
     setAuditRotations((current) => upsertById(current, rotation));
     save("rotation.upsert", { rotation });
@@ -289,6 +315,7 @@ export function useCalendarData(enabled) {
     mailSettings,
     auditRotations,
     vacations,
+    lunches,
     loading,
     error,
     updateGuard,
@@ -308,5 +335,7 @@ export function useCalendarData(enabled) {
     removeAuditRotation,
     addVacationDays,
     removeVacationDays,
+    setLunch,
+    removeLunch,
   };
 }

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
+import CollapsiblePanel from "./CollapsiblePanel";
 import { dateKey, parseDateKey } from "./auditRotation";
 import { isWorkingDay } from "./calendarRules";
 
@@ -88,10 +89,11 @@ export default function VacationPanel({ guard, vacationDays, holidays, onAdd, on
   }
 
   return (
-    <div className="panel vacation-panel">
-      <div className="panel-title">
-        <h2>Vacaciones</h2>
-      </div>
+    <CollapsiblePanel
+      title="Vacaciones"
+      summary={vacationDays.length ? `${vacationDays.length} ${vacationDays.length === 1 ? "dia" : "dias"}` : "Sin dias"}
+      className="vacation-panel"
+    >
       <form className="vacation-form" onSubmit={submit}>
         <label>
           Desde
@@ -148,6 +150,6 @@ export default function VacationPanel({ guard, vacationDays, holidays, onAdd, on
           ))}
         </ul>
       ) : null}
-    </div>
+    </CollapsiblePanel>
   );
 }

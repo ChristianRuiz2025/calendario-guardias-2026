@@ -1609,3 +1609,176 @@ button.rotation-chip:hover {
   padding: 12px 14px 14px;
   border-top: 1px solid var(--border-soft);
 }
+
+.accent-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.accent-options button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  text-align: left;
+}
+
+.accent-options button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.accent-options button.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  background: var(--accent-soft);
+}
+
+.accent-options button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.accent-swatch {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.accent-option-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.accent-option-text strong {
+  font-size: 0.86rem;
+}
+
+.accent-option-text span {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+@media (max-width: 560px) {
+  .accent-options {
+    grid-template-columns: 1fr;
+  }
+}
+
+.lunch-mode {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 3px;
+  background: var(--surface-2);
+}
+
+.lunch-mode button {
+  min-height: 30px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted-strong);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.lunch-mode button.active {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.lunch-period {
+  grid-column: 1 / -1;
+}
+
+.lunch-period select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0 6px;
+  font-size: 0.85rem;
+  color: var(--text-input);
+  background: var(--surface);
+}
+
+/* Paneles desplegables de la barra lateral (Vacaciones, Comidas, Descargar ICS): van apilados
+   en una columna, todos del mismo ancho. */
+.sidebar-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.sidebar-collapsible .settings-section-toggle {
+  min-height: 48px;
+}
+
+.sidebar-collapsible .lunch-mode,
+.sidebar-collapsible .vacation-form {
+  margin-top: 0;
+}
+
+.sidebar-collapsible .vacation-form {
+  margin-bottom: 0;
+}
+
+.download-kinds {
+  display: grid;
+  gap: 6px;
+}
+
+.download-kind {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  padding: 7px 9px;
+  cursor: pointer;
+}
+
+.download-kind:hover {
+  border-color: var(--accent);
+}
+
+.download-kind input {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.download-kind span {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.download-kind strong {
+  color: var(--text);
+  font-size: 0.86rem;
+}
+
+.download-kind small {
+  color: var(--muted);
+  font-size: 0.74rem;
+}
