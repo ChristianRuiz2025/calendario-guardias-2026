@@ -2102,6 +2102,9 @@ button.rotation-chip:hover {
    tira de meses, y Vacaciones / Comidas / Descargar ICS juntos en "Mis cosas". */
 .brand.compact {
   position: relative;
+  /* Encima de las tarjetas de abajo, para que el menu de tres puntos no quede tapado (con el
+     estilo Cristal cada tarjeta forma su propia capa por el desenfoque). */
+  z-index: 5;
   padding: 12px;
   color: var(--text);
   background: var(--surface);

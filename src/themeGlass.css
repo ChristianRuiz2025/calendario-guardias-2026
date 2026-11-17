@@ -64,7 +64,10 @@
 }
 
 /* El menu de tres puntos y la ventana de Configuracion necesitan mas cuerpo para leerse bien. */
-:root[data-style="cristal"] .sidebar-menu-list,
+:root[data-style="cristal"] .sidebar-menu-list {
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+}
+
 :root[data-style="cristal"] .modal {
   background: color-mix(in srgb, var(--bg) 78%, transparent);
 }
