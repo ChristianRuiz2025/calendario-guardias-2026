@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { CalendarDays } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
+import BrandLogo from "./BrandLogo";
 import { apiRequest } from "./apiClient";
 
 // onLogin(user): se llama cuando el servidor acepta el correo y la contrasena.
@@ -8,6 +9,7 @@ export default function Login({ onLogin }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -25,41 +27,64 @@ export default function Login({ onLogin }) {
 
   return (
     <main className="login-shell">
-      <form className="login-card" onSubmit={handleSubmit}>
-        <div className="brand">
-          <CalendarDays aria-hidden="true" />
-          <div>
-            <h1>Guardias 2026</h1>
-            <p>Inicia sesion para continuar</p>
+      <div className="login-split">
+        {/* Panel de marca: logo, franja con los colores de la flecha y para que sirve la app. */}
+        <section className="login-panel" aria-label="siclik CESA">
+          <BrandLogo className="login-logo" />
+          <div className="login-panel-copy">
+            <span className="login-stripe" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </span>
+            <h1>Calendario de guardias</h1>
+            <p>Turnos, vacaciones, comidas y auditorias del equipo.</p>
           </div>
-        </div>
+          <p className="login-panel-foot">Mesa de ayuda CESA</p>
+        </section>
 
-        <label htmlFor="login-email">Correo</label>
-        <input
-          id="login-email"
-          type="email"
-          autoComplete="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          required
-        />
+        <form className="login-card" onSubmit={handleSubmit}>
+          <h2>Inicia sesion</h2>
 
-        <label htmlFor="login-password">Contrasena</label>
-        <input
-          id="login-password"
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          required
-        />
+          <label htmlFor="login-email">Correo</label>
+          <input
+            id="login-email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            required
+          />
 
-        {error ? <p className="login-error">{error}</p> : null}
+          <label htmlFor="login-password">Contrasena</label>
+          <div className="login-password">
+            <input
+              id="login-password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+            />
+            <button
+              type="button"
+              className="login-eye"
+              onClick={() => setShowPassword((current) => !current)}
+              aria-label={showPassword ? "Ocultar contrasena" : "Mostrar contrasena"}
+              aria-pressed={showPassword}
+              title={showPassword ? "Ocultar contrasena" : "Mostrar contrasena"}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
 
-        <button type="submit" disabled={submitting}>
-          {submitting ? "Ingresando..." : "Ingresar"}
-        </button>
-      </form>
+          {error ? <p className="login-error">{error}</p> : null}
+
+          <button type="submit" disabled={submitting}>
+            {submitting ? "Ingresando..." : "Ingresar"}
+          </button>
+        </form>
+      </div>
     </main>
   );
 }

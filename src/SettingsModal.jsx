@@ -1,5 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { ChevronRight, Plus, Trash2, X } from "lucide-react";
+import {
+  Building2,
+  CalendarClock,
+  ChevronRight,
+  Clock,
+  ListChecks,
+  Mail,
+  Palette,
+  Plus,
+  Trash2,
+  TreePalm,
+  Users,
+  X,
+} from "lucide-react";
 import AuditRotationEditor from "./AuditRotationEditor";
 import MailSettings from "./MailSettings.jsx";
 import { dateKey, findRotationGuard } from "./auditRotation";
@@ -67,19 +80,48 @@ function shiftLabel(shift) {
   return `${hour(shift.start)} a ${hour(shift.end)}`;
 }
 
-// Seccion de Configuracion que se abre y cierra; el resumen se ve aun cerrada.
-function SettingsSection({ title, summary, action, open, onToggle, className = "", children }) {
+// Secciones del menu lateral de Configuracion, agrupadas.
+const NAV_GROUPS = [
+  {
+    label: "Equipo",
+    items: [
+      { id: "guards", label: "Guardias", icon: Users },
+      { id: "shifts", label: "Turnos", icon: Clock },
+      { id: "audits", label: "Auditorias", icon: ListChecks },
+    ],
+  },
+  {
+    label: "Calendario",
+    items: [
+      { id: "office", label: "Dias de oficina", icon: Building2 },
+      { id: "closes", label: "Cierres", icon: CalendarClock },
+      { id: "holidays", label: "Dias feriados", icon: TreePalm },
+    ],
+  },
+  {
+    label: "Otros",
+    items: [
+      { id: "mail", label: "Correos", icon: Mail },
+      { id: "appearance", label: "Apariencia", icon: Palette },
+    ],
+  },
+];
+
+// Seccion de Configuracion: solo se muestra la elegida en el menu lateral.
+function SettingsSection({ title, summary, action, open, className = "", children }) {
+  if (!open) {
+    return null;
+  }
   return (
-    <section className={["panel", "settings-section", open ? "open" : "", className].join(" ")}>
-      <div className="settings-section-head">
-        <button type="button" className="settings-section-toggle" onClick={onToggle} aria-expanded={open}>
-          <ChevronRight size={18} className="holiday-chevron" aria-hidden="true" />
-          <h2>{title}</h2>
-          {summary ? <span className="settings-section-summary">{summary}</span> : null}
-        </button>
+    <section className={["settings-page", className].join(" ")} aria-label={title}>
+      <div className="settings-page-head">
+        <div>
+          <h3>{title}</h3>
+          {summary ? <p className="settings-page-summary">{summary}</p> : null}
+        </div>
         {action}
       </div>
-      {open ? <div className="settings-section-body">{children}</div> : null}
+      <div className="settings-page-body">{children}</div>
     </section>
   );
 }
@@ -113,21 +155,17 @@ export default function SettingsModal({
   const [newHolidayDate, setNewHolidayDate] = useState("");
   const [newHolidayName, setNewHolidayName] = useState("");
   const holidayGroups = groupHolidaysByMonth(Object.keys(holidays));
-  const [openSections, setOpenSections] = useState([]);
+  const [activeSection, setActiveSection] = useState("guards");
   const mailRecipients = resolveRecipients(mailSettings, guards);
 
-  // Todas las secciones empiezan cerradas; se pueden abrir varias a la vez.
+  // Se ve una seccion a la vez, la elegida en el menu lateral.
   function section(id) {
-    return {
-      open: openSections.includes(id),
-      onToggle: () =>
-        setOpenSections((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id])),
-    };
+    return { open: activeSection === id };
   }
 
-  // Para los botones "+" del encabezado: abre la seccion y luego agrega.
+  // Para los botones "+" del encabezado: muestra la seccion y luego agrega.
   function openAnd(id, action) {
-    setOpenSections((current) => (current.includes(id) ? current : [...current, id]));
+    setActiveSection(id);
     action();
   }
 
@@ -189,7 +227,7 @@ export default function SettingsModal({
 
   return (
     <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <div className="modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
         <header className="modal-header">
           <h2 id="settings-title">Configuracion</h2>
           <button className="icon-button" onClick={onClose} aria-label="Cerrar" title="Cerrar">
@@ -197,7 +235,28 @@ export default function SettingsModal({
           </button>
         </header>
 
-        <div className="modal-body">
+        <div className="settings-layout">
+          <nav className="settings-nav" aria-label="Secciones de configuracion">
+            {NAV_GROUPS.map((group) => (
+              <div className="settings-nav-group" key={group.label}>
+                <p className="settings-nav-label">{group.label}</p>
+                {group.items.map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    className={activeSection === id ? "active" : ""}
+                    aria-current={activeSection === id ? "page" : undefined}
+                    onClick={() => setActiveSection(id)}
+                  >
+                    <Icon size={16} aria-hidden="true" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </nav>
+
+          <div className="settings-content">
             <SettingsSection
               {...section("appearance")}
               title="Apariencia"
@@ -510,6 +569,7 @@ export default function SettingsModal({
                 })}
               </div>
             </SettingsSection>
+          </div>
         </div>
       </div>
     </div>

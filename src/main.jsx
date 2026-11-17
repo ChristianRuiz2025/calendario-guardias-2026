@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  CalendarDays,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -17,6 +16,8 @@ import { SESSION_EXPIRED_EVENT, apiRequest } from "./apiClient";
 import { useCalendarData } from "./useCalendarData";
 import SettingsModal from "./SettingsModal";
 import VacationPanel from "./VacationPanel";
+import { BrandMark } from "./BrandLogo";
+import logoForEmail from "./assets/siclik-cesa.png";
 import LunchPanel from "./LunchPanel";
 import DownloadOptions, { useIcsKinds } from "./DownloadOptions";
 import { useAccentMode, useTheme } from "./useTheme";
@@ -165,6 +166,18 @@ function applyAccentColor(color) {
   style.setProperty("--brand-bg", color);
   style.setProperty("--brand-border", "rgba(0, 0, 0, 0.18)");
   style.setProperty("--brand-text", text);
+}
+
+// El logo (PNG) como data URL para que el servidor lo incruste en el correo: Outlook no muestra
+// imagenes externas. Si falla, el correo se envia sin logo.
+async function logoPngDataUrl() {
+  const blob = await (await fetch(logoForEmail)).blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
 }
 
 function escapeIcsText(value) {
@@ -579,8 +592,17 @@ function App() {
     } catch (captureError) {
       console.error(captureError);
     }
+    let logo = null;
     try {
-      const result = await apiRequest("/api/enviar-mes", { method: "POST", body: { month: monthIndex, image } });
+      logo = await logoPngDataUrl();
+    } catch (logoError) {
+      console.error(logoError);
+    }
+    try {
+      const result = await apiRequest("/api/enviar-mes", {
+        method: "POST",
+        body: { month: monthIndex, image, logo },
+      });
       message = `Correo de ${MONTHS[monthIndex]} enviado a ${[...result.para, ...result.cc].join(", ")}.`;
     } catch (sendError) {
       message = sendError.message || "No se pudo enviar el correo. Revisa tu conexion.";
@@ -615,7 +637,7 @@ function App() {
       <section className="workspace">
         <aside className="sidebar">
           <div className="brand">
-            <CalendarDays aria-hidden="true" />
+            <BrandMark />
             <div>
               <h1>Guardias 2026</h1>
               <p>{currentGuard ? currentGuard.name : "Siclik CESA"}</p>

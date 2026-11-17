@@ -750,20 +750,155 @@ td.month-end-day.ms-close-day {
   padding: 18px;
 }
 
+/* Inicio de sesion: panel de marca a la izquierda y formulario a la derecha, en tonos del tema
+   (sin azul: el unico color fuerte es el de la marca). */
+.login-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  width: 100%;
+  max-width: 760px;
+  min-height: 420px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.login-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 34px 32px;
+  background: color-mix(in srgb, var(--surface) 70%, var(--bg));
+  border-right: 1px solid var(--border-soft);
+}
+
+.login-panel-copy h1 {
+  color: var(--text);
+  font-size: 1.45rem;
+  line-height: 1.25;
+}
+
+.login-panel-copy p {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.login-stripe {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  width: 44px;
+  height: 4px;
+  margin-bottom: 16px;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.login-stripe span:nth-child(1) {
+  background: #feafa1;
+}
+
+.login-stripe span:nth-child(2) {
+  background: #f5564f;
+}
+
+.login-stripe span:nth-child(3) {
+  background: #ea0a2a;
+}
+
+.login-panel-foot {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
 .login-card {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 10px;
-  width: 100%;
-  max-width: 340px;
-  padding: 20px;
+  padding: 34px 32px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
 }
 
-.login-card .brand {
+.login-card h2 {
   margin-bottom: 8px;
+  color: var(--text);
+  font-size: 1.1rem;
+}
+
+.login-logo img {
+  vertical-align: middle;
+  width: 210px;
+  max-width: 100%;
+  height: auto;
+}
+
+@media (max-width: 680px) {
+  .login-split {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .login-panel {
+    gap: 14px;
+    padding: 24px 22px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  .login-panel-copy h1 {
+    font-size: 1.15rem;
+  }
+
+  .login-panel-copy p,
+  .login-panel-foot {
+    display: none;
+  }
+
+  .login-card {
+    padding: 24px 22px;
+  }
+}
+
+/* Logo de siclik CESA: normal en modo claro y "siclik" en blanco (variante A) en modo oscuro. */
+.brand-logo-dark {
+  display: none;
+}
+
+:root[data-theme="dark"] .brand-logo-light {
+  display: none;
+}
+
+:root[data-theme="dark"] .brand-logo-dark {
+  display: block;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .brand-logo-light {
+    display: none;
+  }
+
+  :root:not([data-theme="light"]) .brand-logo-dark {
+    display: block;
+  }
+}
+
+/* Flecha de siclik CESA en la barra lateral, en un cuadro blanco para que no choque con el color del perfil. */
+.brand-mark {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+  background: #ffffff;
+}
+
+.brand-mark img {
+  width: 26px;
+  height: 26px;
 }
 
 .login-card label {
@@ -773,21 +908,69 @@ td.month-end-day.ms-close-day {
 }
 
 .login-card input {
-  padding: 8px 10px;
+  min-height: 40px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--text-input);
-  background: var(--surface);
+  background: var(--surface-2);
 }
 
+.login-card input:focus {
+  outline: none;
+  border-color: var(--muted);
+}
+
+/* Boton en el color del texto (oscuro en modo claro, claro en modo oscuro), sin azul. */
 .login-card button {
-  margin-top: 8px;
-  min-height: 38px;
-  border: 1px solid var(--accent);
-  border-radius: 6px;
-  background: var(--accent);
-  color: var(--accent-contrast);
+  margin-top: 10px;
+  min-height: 42px;
+  border: 1px solid var(--text);
+  border-radius: 8px;
+  background: var(--text);
+  color: var(--surface);
   font-weight: 700;
+}
+
+/* Ojo para mostrar u ocultar la contrasena, dentro del campo. */
+.login-password {
+  position: relative;
+}
+
+.login-password input {
+  width: 100%;
+  padding-right: 44px;
+}
+
+.login-card .login-eye {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  transform: translateY(-50%);
+}
+
+.login-card .login-eye:hover {
+  color: var(--text);
+  opacity: 1;
+}
+
+.login-card button:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.login-card button:disabled {
+  opacity: 0.6;
 }
 
 .login-error {
@@ -833,6 +1016,138 @@ td.month-end-day.ms-close-day {
   display: grid;
   gap: 10px;
   padding: 16px;
+}
+
+/* Configuracion: menu lateral agrupado a la izquierda y una seccion a la vez a la derecha. */
+.modal.settings-modal {
+  max-width: 940px;
+  overflow: hidden;
+}
+
+.settings-layout {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  min-height: 520px;
+}
+
+.settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 10px;
+  background: color-mix(in srgb, var(--surface) 60%, var(--bg));
+  border-right: 1px solid var(--border-soft);
+}
+
+.settings-nav-group {
+  display: grid;
+  gap: 2px;
+}
+
+.settings-nav-label {
+  padding: 4px 10px 2px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.settings-nav button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 34px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 10px;
+  background: transparent;
+  color: var(--muted-strong);
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.settings-nav button:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.settings-nav button.active {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.settings-content {
+  min-width: 0;
+  padding: 18px 20px 20px;
+  background: var(--surface);
+}
+
+.settings-page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.settings-page-head h3 {
+  color: var(--text);
+  font-size: 1.05rem;
+}
+
+.settings-page-summary {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.settings-page-body {
+  display: grid;
+  gap: 10px;
+}
+
+@media (max-width: 680px) {
+  .settings-layout {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  /* En celular el menu es una fila de botones que se desliza. */
+  .settings-nav {
+    flex-direction: row;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 8px 10px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  .settings-nav-group {
+    display: flex;
+    gap: 6px;
+  }
+
+  .settings-nav-label {
+    display: none;
+  }
+
+  .settings-nav button {
+    flex: none;
+    white-space: nowrap;
+  }
+
+  .settings-nav button.active {
+    box-shadow: inset 0 -2px 0 var(--accent);
+  }
+
+  .settings-content {
+    padding: 14px;
+  }
 }
 
 
