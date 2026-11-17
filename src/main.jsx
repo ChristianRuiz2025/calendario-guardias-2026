@@ -1,15 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Download,
-  LogOut,
-  Mail,
-  Moon,
-  Settings,
-  Sun,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Mail } from "lucide-react";
 import "./styles.css";
 // Diseno refinado del calendario. Para regresar al anterior, quita esta linea.
 import "./calendarRefined.css";
@@ -19,6 +10,7 @@ import { useCalendarData } from "./useCalendarData";
 import SettingsModal from "./SettingsModal";
 import VacationPanel from "./VacationPanel";
 import { BrandMark } from "./BrandLogo";
+import SidebarMenu from "./SidebarMenu";
 import logoForEmail from "./assets/siclik-cesa.png";
 import LunchPanel from "./LunchPanel";
 import DownloadOptions, { useIcsKinds } from "./DownloadOptions";
@@ -638,59 +630,63 @@ function App() {
     <main className="app-shell">
       <section className="workspace">
         <aside className="sidebar">
-          <div className="brand">
+          <div className="brand compact">
             <BrandMark />
             <div>
               <h1>Guardias 2026</h1>
               <p>{currentGuard ? currentGuard.name : "Siclik CESA"}</p>
             </div>
-            <div className="brand-actions">
-              <button
-                className="icon-button"
-                onClick={toggleTheme}
-                aria-label={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
-                title={theme === "dark" ? "Modo claro" : "Modo oscuro"}
-              >
-                {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-              </button>
-              <button
-                className="icon-button"
-                onClick={() => setSettingsOpen(true)}
-                aria-label="Configuracion"
-                title="Configuracion"
-              >
-                <Settings size={18} />
-              </button>
-              <button
-                className="icon-button"
-                onClick={signOut}
-                aria-label="Cerrar sesion"
-                title="Cerrar sesion"
-              >
-                <LogOut size={18} />
-              </button>
-            </div>
+            <SidebarMenu
+              theme={theme}
+              onToggleTheme={toggleTheme}
+              onOpenSettings={() => setSettingsOpen(true)}
+              onSignOut={signOut}
+            />
           </div>
 
-          <div className="panel">
-            <div className="panel-title">
-              <h2>Mes</h2>
+          {/* Mes: flechas y una tira con los 12 meses (cada rayita lleva a su mes). */}
+          <div className="month-picker">
+            <div className="panel month-stepper">
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => setMonthIndex((monthIndex + 11) % 12)}
+                aria-label="Mes anterior"
+                title="Mes anterior"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <strong>
+                {MONTHS[monthIndex]} {YEAR}
+              </strong>
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => setMonthIndex((monthIndex + 1) % 12)}
+                aria-label="Mes siguiente"
+                title="Mes siguiente"
+              >
+                <ChevronRight size={18} />
+              </button>
             </div>
-            <div className="month-grid">
+            <div className="month-strip">
               {MONTHS.map((month, index) => (
                 <button
                   key={month}
+                  type="button"
                   className={index === monthIndex ? "active" : ""}
                   onClick={() => setMonthIndex(index)}
-                >
-                  {month.slice(0, 3)}
-                </button>
+                  aria-label={month}
+                  aria-current={index === monthIndex ? "true" : undefined}
+                  title={month}
+                />
               ))}
             </div>
           </div>
 
           {currentGuard ? (
             <div className="sidebar-stack">
+              <p className="sidebar-section-label">Mis cosas</p>
               <VacationPanel
                 guard={currentGuard}
                 vacationDays={Object.keys(vacations)

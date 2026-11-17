@@ -46,6 +46,7 @@ export default function DownloadOptions({ kinds, onToggle, onDownload, monthName
   return (
     <CollapsiblePanel
       title="Descargar ICS"
+      icon={Download}
       summary={kinds.length === ICS_KINDS.length ? "Todos" : `${kinds.length} de ${ICS_KINDS.length}`}
       className="download-options"
     >
