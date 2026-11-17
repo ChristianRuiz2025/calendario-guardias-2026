@@ -5,7 +5,8 @@
 
 .guard-calendar.refined {
   width: 100%;
-  max-width: 1040px;
+  /* Mas angosto y un poco mas alto para que cada dia quede casi cuadrado (~150 x 140). */
+  max-width: 940px;
   border-collapse: separate;
   border-spacing: 5px 0;
   padding: 6px 4px;
@@ -94,6 +95,12 @@
 }
 
 /* Turnos: parte de abajo de la tarjeta; el borde inferior transparente separa las semanas. */
+.guard-calendar.refined .schedule-row th,
+.guard-calendar.refined .schedule-row td,
+.guard-calendar.refined .schedule-row .audit-cell {
+  height: max(120px, calc(var(--shift-rows, 3) * 40px));
+}
+
 .guard-calendar.refined .schedule-row th {
   padding-left: 4px;
   color: var(--muted);
