@@ -983,7 +983,9 @@ td.month-end-day.ms-close-day {
   inset: 0;
   z-index: 50;
   display: grid;
-  place-items: start center;
+  /* Centrada en la pantalla; "safe" la pega arriba si es mas alta que la ventana (para poder
+     hacer scroll sin que se corte el principio). */
+  place-items: safe center;
   padding: 24px 16px;
   overflow-y: auto;
   background: rgba(10, 30, 46, 0.45);
@@ -2341,4 +2343,153 @@ button.rotation-chip:hover {
   .topbar.calendar-head .toolbar {
     justify-content: flex-start;
   }
+}
+
+/* Configuracion > Apariencia > Tema: Automatico, Claro u Oscuro. */
+.theme-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.theme-options button {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  color: var(--text);
+  text-align: left;
+}
+
+.theme-options button svg {
+  color: var(--muted-strong);
+}
+
+.theme-options button strong {
+  font-size: 0.86rem;
+}
+
+.theme-options button span {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.theme-options button:hover {
+  border-color: var(--accent);
+}
+
+.theme-options button.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  background: var(--accent-soft);
+}
+
+@media (max-width: 560px) {
+  .theme-options {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Configuracion sin barra de color arriba: titulo en el menu lateral y la X en la esquina. */
+.modal.settings-modal {
+  position: relative;
+}
+
+.settings-nav-title {
+  padding: 8px 10px 6px;
+  color: var(--text);
+  font-size: 1.1rem;
+}
+
+.settings-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  border-color: transparent;
+  background: transparent;
+}
+
+.settings-close:hover {
+  background: var(--surface-2);
+}
+
+/* Deja espacio a la X junto a los botones del encabezado de cada seccion. */
+.settings-page-head {
+  padding-right: 44px;
+}
+
+@media (max-width: 680px) {
+  .settings-nav {
+    padding-right: 52px;
+  }
+
+  .settings-nav-title {
+    flex: none;
+    align-self: center;
+    padding: 0 6px 0 2px;
+    font-size: 1rem;
+    white-space: nowrap;
+  }
+
+  .settings-page-head {
+    padding-right: 0;
+  }
+}
+
+/* Marca de la semana de auditorias (src/WeekMarks.jsx): capa detras de la tabla del calendario. */
+.calendar-wrap {
+  position: relative;
+}
+
+.guard-calendar {
+  position: relative;
+  z-index: 1;
+}
+
+.week-marks {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.week-mark {
+  position: absolute;
+}
+
+/* Contorno y fondo suave alrededor de la semana (WeekMarks deja 4 px de aire alrededor). */
+.week-marks.tinted .week-mark {
+  box-sizing: border-box;
+  border: 2px solid var(--week-color);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--week-color) 18%, transparent);
+}
+
+/* Franja: barra de 5 px a la izquierda de la semana (junto a las horas). */
+.week-marks.stripe .week-mark {
+  border-radius: 3px;
+  background: var(--week-color);
+}
+
+/* Muestras de la opcion en Apariencia. */
+.week-mark-sample {
+  display: block;
+  width: 34px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.week-mark-sample.tinted {
+  border: 2px solid #f38ba8;
+  background: color-mix(in srgb, #f38ba8 18%, transparent);
+}
+
+.week-mark-sample.stripe {
+  border-left: 5px solid #f38ba8;
 }

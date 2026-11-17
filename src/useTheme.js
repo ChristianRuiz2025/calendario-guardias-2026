@@ -16,12 +16,13 @@ function systemTheme() {
   return window.matchMedia?.(DARK_QUERY).matches ? "dark" : "light";
 }
 
-// Tema claro u oscuro. Por defecto sigue al sistema; el boton guarda la eleccion
-// en este navegador.
+// Tema claro u oscuro (Configuracion > Apariencia). "system" sigue al sistema; "light" y "dark"
+// se guardan en este navegador.
 export function useTheme() {
   const [storedTheme, setStoredTheme] = useState(readStoredTheme);
   const [system, setSystem] = useState(systemTheme);
   const theme = storedTheme ?? system;
+  const themeMode = storedTheme ?? "system";
 
   useEffect(() => {
     const media = window.matchMedia?.(DARK_QUERY);
@@ -37,10 +38,8 @@ export function useTheme() {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
 
-  function toggleTheme() {
-    const next = theme === "dark" ? "light" : "dark";
-    // Si la eleccion coincide con el sistema, se vuelve a seguir al sistema.
-    const stored = next === system ? null : next;
+  function setThemeMode(mode) {
+    const stored = mode === "light" || mode === "dark" ? mode : null;
     setStoredTheme(stored);
     try {
       if (stored) {
@@ -53,39 +52,7 @@ export function useTheme() {
     }
   }
 
-  return { theme, toggleTheme };
-}
-
-const ACCENT_STORAGE_KEY = "calendario-accent";
-
-function readStoredAccent() {
-  try {
-    return localStorage.getItem(ACCENT_STORAGE_KEY) === "default" ? "default" : "profile";
-  } catch {
-    return "profile";
-  }
-}
-
-// Color de acento: "profile" usa el color de la persona que inicio sesion,
-// "default" deja el azul de la app. La eleccion se guarda en este navegador.
-export function useAccentMode() {
-  const [accentMode, setAccentModeState] = useState(readStoredAccent);
-
-  function setAccentMode(mode) {
-    const next = mode === "default" ? "default" : "profile";
-    setAccentModeState(next);
-    try {
-      if (next === "default") {
-        localStorage.setItem(ACCENT_STORAGE_KEY, next);
-      } else {
-        localStorage.removeItem(ACCENT_STORAGE_KEY);
-      }
-    } catch {
-      // Sin almacenamiento solo dura esta sesion.
-    }
-  }
-
-  return { accentMode, setAccentMode };
+  return { theme, themeMode, setThemeMode };
 }
 
 const STYLE_STORAGE_KEY = "calendario-estilo";
@@ -125,4 +92,39 @@ export function useStyleMode() {
   }
 
   return { styleMode, setStyleMode };
+}
+
+const WEEK_MARK_STORAGE_KEY = "calendario-marca-auditoria";
+// Como se marca la semana de auditorias: sin marca, contorno con fondo suave o franja.
+export const WEEK_MARK_MODES = ["none", "tinted", "stripe"];
+
+function readStoredWeekMark() {
+  try {
+    const value = localStorage.getItem(WEEK_MARK_STORAGE_KEY);
+    return WEEK_MARK_MODES.includes(value) ? value : "none";
+  } catch {
+    return "none";
+  }
+}
+
+// Marca de la semana con el color de quien tiene auditorias (ver src/WeekMarks.jsx).
+// Se guarda en este navegador.
+export function useWeekMarkMode() {
+  const [weekMarkMode, setWeekMarkModeState] = useState(readStoredWeekMark);
+
+  function setWeekMarkMode(mode) {
+    const next = WEEK_MARK_MODES.includes(mode) ? mode : "none";
+    setWeekMarkModeState(next);
+    try {
+      if (next === "none") {
+        localStorage.removeItem(WEEK_MARK_STORAGE_KEY);
+      } else {
+        localStorage.setItem(WEEK_MARK_STORAGE_KEY, next);
+      }
+    } catch {
+      // Sin almacenamiento solo dura esta sesion.
+    }
+  }
+
+  return { weekMarkMode, setWeekMarkMode };
 }

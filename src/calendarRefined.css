@@ -98,7 +98,17 @@
 .guard-calendar.refined .schedule-row th,
 .guard-calendar.refined .schedule-row td,
 .guard-calendar.refined .schedule-row .audit-cell {
-  height: max(120px, calc(var(--shift-rows, 3) * 40px));
+  /* Alto de la zona de turnos: se ajusta a la pantalla para que el mes completo (5 o 6 semanas,
+     --weeks) quepa sin hacer scroll. --calendar-chrome es lo que ocupa lo demas (encabezado,
+     nombres de los dias y simbologia) y --week-chrome lo de cada semana fuera de los turnos
+     (numero del dia y separacion). Nunca baja de 72 px ni pasa del alto "cuadrado". */
+  --calendar-chrome: 196px;
+  --week-chrome: 26px;
+  height: clamp(
+    72px,
+    calc((100vh - var(--calendar-chrome)) / var(--weeks, 5) - var(--week-chrome)),
+    max(120px, calc(var(--shift-rows, 3) * 40px))
+  );
 }
 
 .guard-calendar.refined .schedule-row th {

@@ -16,7 +16,8 @@ import SidebarMenu from "./SidebarMenu";
 import logoForEmail from "./assets/siclik-cesa.png";
 import LunchPanel from "./LunchPanel";
 import DownloadOptions, { useIcsKinds } from "./DownloadOptions";
-import { useAccentMode, useStyleMode, useTheme } from "./useTheme";
+import { useStyleMode, useTheme, useWeekMarkMode } from "./useTheme";
+import WeekMarks from "./WeekMarks";
 import { buildCloseDays, isWorkingDay } from "./calendarRules";
 import { dateKey, getAuditGuard, pad, startOfWorkWeek } from "./auditRotation";
 
@@ -469,9 +470,9 @@ function App() {
   const [notice, setNotice] = useState("");
   const [sendingMail, setSendingMail] = useState(false);
   const calendarRef = useRef(null);
-  const { theme, toggleTheme } = useTheme();
-  const { accentMode, setAccentMode } = useAccentMode();
+  const { themeMode, setThemeMode } = useTheme();
   const { styleMode, setStyleMode } = useStyleMode();
+  const { weekMarkMode, setWeekMarkMode } = useWeekMarkMode();
   const { kinds: icsKinds, toggleKind: toggleIcsKind } = useIcsKinds();
   const schedule = useMemo(
     () => buildSchedule(guards, assignments, shifts, holidays, vacations),
@@ -511,8 +512,8 @@ function App() {
     : undefined;
 
   useEffect(() => {
-    applyAccentColor(accentMode === "profile" ? currentGuard?.color : undefined);
-  }, [accentMode, currentGuard?.color]);
+    applyAccentColor(currentGuard?.color);
+  }, [currentGuard?.color]);
 
   // Descarga los ICS del mes marcados en "Descargar ICS" (turnos, vacaciones, comidas y
   // auditorias) de la persona que inicio sesion. Los que no tienen eventos no se bajan.
@@ -651,8 +652,6 @@ function App() {
               <p>{currentGuard ? currentGuard.name : "Siclik CESA"}</p>
             </div>
             <SidebarMenu
-              theme={theme}
-              onToggleTheme={toggleTheme}
               onOpenSettings={() => setSettingsOpen(true)}
               onSignOut={signOut}
             />
@@ -764,10 +763,12 @@ function App() {
             auditRotations={auditRotations}
             onSaveAuditRotation={saveAuditRotation}
             onRemoveAuditRotation={removeAuditRotation}
-            accentMode={accentMode}
+            themeMode={themeMode}
             styleMode={styleMode}
+            weekMarkMode={weekMarkMode}
+            onUpdateWeekMarkMode={setWeekMarkMode}
             onUpdateStyleMode={setStyleMode}
-            onUpdateAccentMode={setAccentMode}
+            onUpdateThemeMode={setThemeMode}
             currentGuard={currentGuard}
           />
         ) : null}
@@ -811,7 +812,15 @@ function App() {
             ) : null}
 
             <div className="calendar-wrap">
-              <table className="guard-calendar refined" ref={calendarRef} style={{ "--shift-rows": shifts.length }}>
+              <WeekMarks
+                tableRef={calendarRef}
+                mode={weekMarkMode}
+                colors={monthWeeks.map(
+                  (week) => getAuditGuardForWeek(week, guards, auditAssignments, auditRotations)?.color ?? null
+                )}
+              />
+              <table className="guard-calendar refined" ref={calendarRef} style={{ "--shift-rows": shifts.length, "--weeks": monthWeeks.length }}
+              >
                 <thead>
                   <tr className="month-row">
                     <th>Entrada</th>
