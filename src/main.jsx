@@ -4,6 +4,8 @@ import { ChevronLeft, ChevronRight, Download, Mail } from "lucide-react";
 import "./styles.css";
 // Diseno refinado del calendario. Para regresar al anterior, quita esta linea.
 import "./calendarRefined.css";
+// Estilo "Cristal" de Configuracion > Apariencia (solo aplica con <html data-style="cristal">).
+import "./themeGlass.css";
 import Login from "./Login";
 import { SESSION_EXPIRED_EVENT, apiRequest } from "./apiClient";
 import { useCalendarData } from "./useCalendarData";
@@ -14,7 +16,7 @@ import SidebarMenu from "./SidebarMenu";
 import logoForEmail from "./assets/siclik-cesa.png";
 import LunchPanel from "./LunchPanel";
 import DownloadOptions, { useIcsKinds } from "./DownloadOptions";
-import { useAccentMode, useTheme } from "./useTheme";
+import { useAccentMode, useStyleMode, useTheme } from "./useTheme";
 import { buildCloseDays, isWorkingDay } from "./calendarRules";
 import { dateKey, getAuditGuard, pad, startOfWorkWeek } from "./auditRotation";
 
@@ -469,6 +471,7 @@ function App() {
   const calendarRef = useRef(null);
   const { theme, toggleTheme } = useTheme();
   const { accentMode, setAccentMode } = useAccentMode();
+  const { styleMode, setStyleMode } = useStyleMode();
   const { kinds: icsKinds, toggleKind: toggleIcsKind } = useIcsKinds();
   const schedule = useMemo(
     () => buildSchedule(guards, assignments, shifts, holidays, vacations),
@@ -572,7 +575,14 @@ function App() {
     // Foto del calendario tal como se ve, para que el correo quede igual. Si falla, el
     // servidor manda la tabla HTML.
     let image = null;
+    const root = document.documentElement;
+    const previousStyle = root.dataset.style;
     try {
+      // El estilo cristal (translucido y con desenfoque) no sale bien en la foto: se toma con el clasico.
+      if (previousStyle && previousStyle !== "clasico") {
+        root.dataset.style = "clasico";
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }
       const { toPng } = await import("html-to-image");
       const { width, height } = calendarRef.current.getBoundingClientRect();
       image = await toPng(calendarRef.current, {
@@ -585,6 +595,10 @@ function App() {
       });
     } catch (captureError) {
       console.error(captureError);
+    } finally {
+      if (previousStyle) {
+        root.dataset.style = previousStyle;
+      }
     }
     let logo = null;
     try {
@@ -751,6 +765,8 @@ function App() {
             onSaveAuditRotation={saveAuditRotation}
             onRemoveAuditRotation={removeAuditRotation}
             accentMode={accentMode}
+            styleMode={styleMode}
+            onUpdateStyleMode={setStyleMode}
             onUpdateAccentMode={setAccentMode}
             currentGuard={currentGuard}
           />
