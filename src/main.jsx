@@ -16,7 +16,8 @@ import SidebarMenu from "./SidebarMenu";
 import logoForEmail from "./assets/siclik-cesa.png";
 import LunchPanel from "./LunchPanel";
 import DownloadOptions, { useIcsKinds } from "./DownloadOptions";
-import { useStyleMode, useTheme } from "./useTheme";
+import { useStyleMode, useTheme, useWeekMarkMode } from "./useTheme";
+import WeekMarks from "./WeekMarks";
 import { buildCloseDays, isWorkingDay } from "./calendarRules";
 import { dateKey, getAuditGuard, pad, startOfWorkWeek } from "./auditRotation";
 
@@ -471,6 +472,7 @@ function App() {
   const calendarRef = useRef(null);
   const { themeMode, setThemeMode } = useTheme();
   const { styleMode, setStyleMode } = useStyleMode();
+  const { weekMarkMode, setWeekMarkMode } = useWeekMarkMode();
   const { kinds: icsKinds, toggleKind: toggleIcsKind } = useIcsKinds();
   const schedule = useMemo(
     () => buildSchedule(guards, assignments, shifts, holidays, vacations),
@@ -763,6 +765,8 @@ function App() {
             onRemoveAuditRotation={removeAuditRotation}
             themeMode={themeMode}
             styleMode={styleMode}
+            weekMarkMode={weekMarkMode}
+            onUpdateWeekMarkMode={setWeekMarkMode}
             onUpdateStyleMode={setStyleMode}
             onUpdateThemeMode={setThemeMode}
             currentGuard={currentGuard}
@@ -808,6 +812,13 @@ function App() {
             ) : null}
 
             <div className="calendar-wrap">
+              <WeekMarks
+                tableRef={calendarRef}
+                mode={weekMarkMode}
+                colors={monthWeeks.map(
+                  (week) => getAuditGuardForWeek(week, guards, auditAssignments, auditRotations)?.color ?? null
+                )}
+              />
               <table className="guard-calendar refined" ref={calendarRef} style={{ "--shift-rows": shifts.length, "--weeks": monthWeeks.length }}
               >
                 <thead>

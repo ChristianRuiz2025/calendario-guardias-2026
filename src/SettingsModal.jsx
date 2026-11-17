@@ -154,6 +154,8 @@ export default function SettingsModal({
   onUpdateThemeMode,
   styleMode,
   onUpdateStyleMode,
+  weekMarkMode,
+  onUpdateWeekMarkMode,
   currentGuard,
 }) {
   const [newHolidayDate, setNewHolidayDate] = useState("");
@@ -318,7 +320,31 @@ export default function SettingsModal({
                   </button>
                 ))}
               </div>
-              <p className="settings-hint">El estilo y el tema se guardan solo en este navegador.</p>
+              <p className="settings-subtitle">Semana de auditorias</p>
+              <div className="theme-options" role="radiogroup" aria-label="Marca de la semana de auditorias">
+                {[
+                  { id: "none", label: "Sin marca", hint: "Como hasta ahora" },
+                  { id: "tinted", label: "Contorno y fondo", hint: "Borde y fondo suave del color" },
+                  { id: "stripe", label: "Franja", hint: "Barra de color a la izquierda" },
+                ].map(({ id, label, hint }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="radio"
+                    className={weekMarkMode === id ? "active" : ""}
+                    aria-checked={weekMarkMode === id}
+                    onClick={() => onUpdateWeekMarkMode(id)}
+                  >
+                    <span className={`week-mark-sample ${id}`} aria-hidden="true" />
+                    <strong>{label}</strong>
+                    <span>{hint}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="settings-hint">
+                Marca cada semana con el color de quien tiene auditorias. El estilo, el tema y esta marca se guardan
+                solo en este navegador.
+              </p>
             </SettingsSection>
 
             <SettingsSection

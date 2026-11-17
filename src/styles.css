@@ -2439,3 +2439,57 @@ button.rotation-chip:hover {
     padding-right: 0;
   }
 }
+
+/* Marca de la semana de auditorias (src/WeekMarks.jsx): capa detras de la tabla del calendario. */
+.calendar-wrap {
+  position: relative;
+}
+
+.guard-calendar {
+  position: relative;
+  z-index: 1;
+}
+
+.week-marks {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.week-mark {
+  position: absolute;
+}
+
+/* Contorno y fondo suave alrededor de la semana (WeekMarks deja 4 px de aire alrededor). */
+.week-marks.tinted .week-mark {
+  box-sizing: border-box;
+  border: 2px solid var(--week-color);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--week-color) 18%, transparent);
+}
+
+/* Franja: barra de 5 px a la izquierda de la semana (junto a las horas). */
+.week-marks.stripe .week-mark {
+  border-radius: 3px;
+  background: var(--week-color);
+}
+
+/* Muestras de la opcion en Apariencia. */
+.week-mark-sample {
+  display: block;
+  width: 34px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.week-mark-sample.tinted {
+  border: 2px solid #f38ba8;
+  background: color-mix(in srgb, #f38ba8 18%, transparent);
+}
+
+.week-mark-sample.stripe {
+  border-left: 5px solid #f38ba8;
+}
