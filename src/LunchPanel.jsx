@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, UtensilsCrossed } from "lucide-react";
 import CollapsiblePanel from "./CollapsiblePanel";
 import { pad, parseDateKey } from "./auditRotation";
 import { isWorkingDay } from "./calendarRules";
@@ -88,7 +88,7 @@ export default function LunchPanel({ guard, lunches, holidays, monthIndex, onSet
   }
 
   return (
-    <CollapsiblePanel title="Comidas" summary={summary} className="lunch-panel">
+    <CollapsiblePanel title="Comidas" summary={summary} icon={UtensilsCrossed} className="lunch-panel">
       <div className="lunch-mode" role="radiogroup" aria-label="Aplicar la comida a">
         <button
           type="button"

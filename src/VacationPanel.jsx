@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, TreePalm, Trash2 } from "lucide-react";
 import CollapsiblePanel from "./CollapsiblePanel";
 import { dateKey, parseDateKey } from "./auditRotation";
 import { isWorkingDay } from "./calendarRules";
@@ -91,6 +91,7 @@ export default function VacationPanel({ guard, vacationDays, holidays, onAdd, on
   return (
     <CollapsiblePanel
       title="Vacaciones"
+      icon={TreePalm}
       summary={vacationDays.length ? `${vacationDays.length} ${vacationDays.length === 1 ? "dia" : "dias"}` : "Sin dias"}
       className="vacation-panel"
     >

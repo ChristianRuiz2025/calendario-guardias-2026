@@ -1,0 +1,137 @@
+/* Estilo "Cristal" (Configuracion > Apariencia): tarjetas translucidas con desenfoque sobre un
+   fondo con manchas de color. Solo aplica con <html data-style="cristal"> (lo pone useStyleMode
+   en src/useTheme.js); con "clasico" este archivo no hace nada. */
+
+/* Colores en modo claro. */
+:root[data-style="cristal"] {
+  --bg: #e6edf6;
+  --surface: rgba(255, 255, 255, 0.58);
+  --surface-2: rgba(255, 255, 255, 0.62);
+  --border: rgba(22, 33, 46, 0.12);
+  --border-soft: rgba(22, 33, 46, 0.08);
+  --glass-edge: rgba(255, 255, 255, 0.85);
+  --glass-blob-1: rgba(90, 150, 255, 0.55);
+  --glass-blob-2: rgba(255, 120, 160, 0.45);
+  --glass-blob-3: rgba(80, 210, 190, 0.4);
+}
+
+/* Colores en modo oscuro (mas especifico que los :root[data-theme="dark"] de styles.css). */
+:root[data-style="cristal"][data-theme="dark"] {
+  --bg: #0a111d;
+  --surface: rgba(255, 255, 255, 0.06);
+  --surface-2: rgba(255, 255, 255, 0.07);
+  --border: rgba(255, 255, 255, 0.14);
+  --border-soft: rgba(255, 255, 255, 0.09);
+  --glass-edge: rgba(255, 255, 255, 0.16);
+  --glass-blob-1: rgba(42, 109, 244, 0.5);
+  --glass-blob-2: rgba(227, 38, 107, 0.42);
+  --glass-blob-3: rgba(25, 179, 160, 0.3);
+}
+
+/* Fondo: tres manchas de color fijas detras de toda la pagina. El body queda transparente para
+   que se vean (el color base lo pone :root con var(--bg)). */
+:root[data-style="cristal"] body {
+  background: transparent;
+}
+
+:root[data-style="cristal"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(38vw 38vw at 4% 4%, var(--glass-blob-1), transparent 70%),
+    radial-gradient(34vw 34vw at 88% 96%, var(--glass-blob-2), transparent 70%),
+    radial-gradient(28vw 28vw at 46% 48%, var(--glass-blob-3), transparent 70%);
+}
+
+/* Tarjetas de cristal. */
+:root[data-style="cristal"] .panel,
+:root[data-style="cristal"] .brand,
+:root[data-style="cristal"] .calendar-card,
+:root[data-style="cristal"] .legend-bar,
+:root[data-style="cristal"] .login-split,
+:root[data-style="cristal"] .sidebar-menu-list,
+:root[data-style="cristal"] .modal {
+  border-color: var(--glass-edge);
+  border-radius: 14px;
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  box-shadow:
+    0 10px 36px rgba(10, 20, 40, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+/* El menu de tres puntos y la ventana de Configuracion necesitan mas cuerpo para leerse bien. */
+:root[data-style="cristal"] .sidebar-menu-list {
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+}
+
+:root[data-style="cristal"] .modal {
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+}
+
+:root[data-style="cristal"] .settings-nav,
+:root[data-style="cristal"] .settings-content,
+:root[data-style="cristal"] .login-panel,
+:root[data-style="cristal"] .login-card {
+  background: transparent;
+}
+
+/* "Mis cosas": las tarjetas pegadas conservan las esquinas de en medio rectas. */
+:root[data-style="cristal"] .sidebar-stack .sidebar-collapsible + .sidebar-collapsible {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+:root[data-style="cristal"] .sidebar-stack .sidebar-collapsible:has(+ .sidebar-collapsible) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* Calendario: el espacio entre semanas es transparente (antes era del color de la tarjeta). */
+:root[data-style="cristal"] .guard-calendar.refined .schedule-row td,
+:root[data-style="cristal"] .guard-calendar.refined .schedule-row .audit-cell {
+  border-bottom-color: transparent;
+}
+
+:root[data-style="cristal"] .guard-calendar.refined .date-row td {
+  border-radius: 12px 12px 0 0;
+}
+
+:root[data-style="cristal"] .guard-calendar.refined .schedule-row td:not(.weekend):not(.outside):not(.audit-cell) {
+  border-radius: 0 0 12px 12px;
+}
+
+:root[data-style="cristal"] .guard-calendar.refined .date-row td.outside {
+  background: transparent;
+}
+
+/* Muestras de la opcion en Configuracion > Apariencia. */
+.style-swatch {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.style-swatch.classic {
+  background: var(--surface);
+}
+
+.style-swatch.glass {
+  background:
+    radial-gradient(circle at 25% 25%, rgba(90, 150, 255, 0.8), transparent 60%),
+    radial-gradient(circle at 80% 80%, rgba(255, 120, 160, 0.8), transparent 60%),
+    #dfe8f3;
+  box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.55);
+}
+
+.settings-subtitle {
+  margin-top: 4px;
+  color: var(--muted-strong);
+  font-size: 0.82rem;
+  font-weight: 700;
+}

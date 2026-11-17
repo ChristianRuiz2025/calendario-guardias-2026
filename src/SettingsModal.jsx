@@ -150,6 +150,8 @@ export default function SettingsModal({
   onRemoveAuditRotation,
   accentMode,
   onUpdateAccentMode,
+  styleMode,
+  onUpdateStyleMode,
   currentGuard,
 }) {
   const [newHolidayDate, setNewHolidayDate] = useState("");
@@ -260,9 +262,42 @@ export default function SettingsModal({
             <SettingsSection
               {...section("appearance")}
               title="Apariencia"
-              summary={accentMode === "profile" && currentGuard ? "Color de mi perfil" : "Azul predeterminado"}
+              summary={`${styleMode === "cristal" ? "Cristal" : "Clasico"} · ${
+                accentMode === "profile" && currentGuard ? "Color de mi perfil" : "Azul predeterminado"
+              }`}
             >
-              <p className="settings-hint">Color de botones y encabezado. Se guarda solo en este navegador.</p>
+              <p className="settings-subtitle">Estilo</p>
+              <div className="accent-options" role="radiogroup" aria-label="Estilo de la aplicacion">
+                <button
+                  type="button"
+                  role="radio"
+                  className={styleMode === "clasico" ? "active" : ""}
+                  aria-checked={styleMode === "clasico"}
+                  onClick={() => onUpdateStyleMode("clasico")}
+                >
+                  <span className="style-swatch classic" aria-hidden="true" />
+                  <span className="accent-option-text">
+                    <strong>Clasico</strong>
+                    <span>Tarjetas solidas</span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  className={styleMode === "cristal" ? "active" : ""}
+                  aria-checked={styleMode === "cristal"}
+                  onClick={() => onUpdateStyleMode("cristal")}
+                >
+                  <span className="style-swatch glass" aria-hidden="true" />
+                  <span className="accent-option-text">
+                    <strong>Cristal</strong>
+                    <span>Translucido sobre fondo de color</span>
+                  </span>
+                </button>
+              </div>
+
+              <p className="settings-subtitle">Color</p>
+              <p className="settings-hint">Color de botones y detalles. El estilo y el color se guardan solo en este navegador.</p>
               <div className="accent-options" role="radiogroup" aria-label="Color de la aplicacion">
                 <button
                   type="button"

@@ -1,28 +1,22 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Download,
-  LogOut,
-  Mail,
-  Moon,
-  Settings,
-  Sun,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Mail } from "lucide-react";
 import "./styles.css";
 // Diseno refinado del calendario. Para regresar al anterior, quita esta linea.
 import "./calendarRefined.css";
+// Estilo "Cristal" de Configuracion > Apariencia (solo aplica con <html data-style="cristal">).
+import "./themeGlass.css";
 import Login from "./Login";
 import { SESSION_EXPIRED_EVENT, apiRequest } from "./apiClient";
 import { useCalendarData } from "./useCalendarData";
 import SettingsModal from "./SettingsModal";
 import VacationPanel from "./VacationPanel";
 import { BrandMark } from "./BrandLogo";
+import SidebarMenu from "./SidebarMenu";
 import logoForEmail from "./assets/siclik-cesa.png";
 import LunchPanel from "./LunchPanel";
 import DownloadOptions, { useIcsKinds } from "./DownloadOptions";
-import { useAccentMode, useTheme } from "./useTheme";
+import { useAccentMode, useStyleMode, useTheme } from "./useTheme";
 import { buildCloseDays, isWorkingDay } from "./calendarRules";
 import { dateKey, getAuditGuard, pad, startOfWorkWeek } from "./auditRotation";
 
@@ -477,6 +471,7 @@ function App() {
   const calendarRef = useRef(null);
   const { theme, toggleTheme } = useTheme();
   const { accentMode, setAccentMode } = useAccentMode();
+  const { styleMode, setStyleMode } = useStyleMode();
   const { kinds: icsKinds, toggleKind: toggleIcsKind } = useIcsKinds();
   const schedule = useMemo(
     () => buildSchedule(guards, assignments, shifts, holidays, vacations),
@@ -580,7 +575,14 @@ function App() {
     // Foto del calendario tal como se ve, para que el correo quede igual. Si falla, el
     // servidor manda la tabla HTML.
     let image = null;
+    const root = document.documentElement;
+    const previousStyle = root.dataset.style;
     try {
+      // El estilo cristal (translucido y con desenfoque) no sale bien en la foto: se toma con el clasico.
+      if (previousStyle && previousStyle !== "clasico") {
+        root.dataset.style = "clasico";
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }
       const { toPng } = await import("html-to-image");
       const { width, height } = calendarRef.current.getBoundingClientRect();
       image = await toPng(calendarRef.current, {
@@ -593,6 +595,10 @@ function App() {
       });
     } catch (captureError) {
       console.error(captureError);
+    } finally {
+      if (previousStyle) {
+        root.dataset.style = previousStyle;
+      }
     }
     let logo = null;
     try {
@@ -638,59 +644,63 @@ function App() {
     <main className="app-shell">
       <section className="workspace">
         <aside className="sidebar">
-          <div className="brand">
+          <div className="brand compact">
             <BrandMark />
             <div>
               <h1>Guardias 2026</h1>
               <p>{currentGuard ? currentGuard.name : "Siclik CESA"}</p>
             </div>
-            <div className="brand-actions">
-              <button
-                className="icon-button"
-                onClick={toggleTheme}
-                aria-label={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
-                title={theme === "dark" ? "Modo claro" : "Modo oscuro"}
-              >
-                {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-              </button>
-              <button
-                className="icon-button"
-                onClick={() => setSettingsOpen(true)}
-                aria-label="Configuracion"
-                title="Configuracion"
-              >
-                <Settings size={18} />
-              </button>
-              <button
-                className="icon-button"
-                onClick={signOut}
-                aria-label="Cerrar sesion"
-                title="Cerrar sesion"
-              >
-                <LogOut size={18} />
-              </button>
-            </div>
+            <SidebarMenu
+              theme={theme}
+              onToggleTheme={toggleTheme}
+              onOpenSettings={() => setSettingsOpen(true)}
+              onSignOut={signOut}
+            />
           </div>
 
-          <div className="panel">
-            <div className="panel-title">
-              <h2>Mes</h2>
+          {/* Mes: flechas y una tira con los 12 meses (cada rayita lleva a su mes). */}
+          <div className="month-picker">
+            <div className="panel month-stepper">
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => setMonthIndex((monthIndex + 11) % 12)}
+                aria-label="Mes anterior"
+                title="Mes anterior"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <strong>
+                {MONTHS[monthIndex]} {YEAR}
+              </strong>
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => setMonthIndex((monthIndex + 1) % 12)}
+                aria-label="Mes siguiente"
+                title="Mes siguiente"
+              >
+                <ChevronRight size={18} />
+              </button>
             </div>
-            <div className="month-grid">
+            <div className="month-strip">
               {MONTHS.map((month, index) => (
                 <button
                   key={month}
+                  type="button"
                   className={index === monthIndex ? "active" : ""}
                   onClick={() => setMonthIndex(index)}
-                >
-                  {month.slice(0, 3)}
-                </button>
+                  aria-label={month}
+                  aria-current={index === monthIndex ? "true" : undefined}
+                  title={month}
+                />
               ))}
             </div>
           </div>
 
           {currentGuard ? (
             <div className="sidebar-stack">
+              <p className="sidebar-section-label">Mis cosas</p>
               <VacationPanel
                 guard={currentGuard}
                 vacationDays={Object.keys(vacations)
@@ -755,207 +765,196 @@ function App() {
             onSaveAuditRotation={saveAuditRotation}
             onRemoveAuditRotation={removeAuditRotation}
             accentMode={accentMode}
+            styleMode={styleMode}
+            onUpdateStyleMode={setStyleMode}
             onUpdateAccentMode={setAccentMode}
             currentGuard={currentGuard}
           />
         ) : null}
 
         <section className="calendar-area">
-          <header className="topbar">
-            <div>
-              <p className="eyebrow">Calendario anual</p>
+          {/* Encabezado integrado: es la parte de arriba de la tarjeta del calendario. Para cambiar de
+              mes estan las flechas de la barra lateral. */}
+          <div className="calendar-card">
+            <header className="topbar calendar-head">
               <h2>
                 {MONTHS[monthIndex]} {YEAR}
               </h2>
-            </div>
-            <div className="toolbar">
-              <button
-                className="icon-button"
-                onClick={() => setMonthIndex((monthIndex + 11) % 12)}
-                aria-label="Mes anterior"
-                title="Mes anterior"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <button
-                className="icon-button"
-                onClick={() => setMonthIndex((monthIndex + 1) % 12)}
-                aria-label="Mes siguiente"
-                title="Mes siguiente"
-              >
-                <ChevronRight size={20} />
-              </button>
-              <button
-                className="download-button"
-                onClick={downloadMonth}
-                disabled={!currentGuard}
-                title={currentGuard ? `Descargar los ICS de ${currentGuard.name}` : "Liga tu correo en Configuracion"}
-              >
-                <Download size={18} />
-                Descargar mes
-              </button>
-              <button
-                className="download-button"
-                onClick={sendMonthEmail}
-                disabled={sendingMail}
-                title="Envia el calendario del mes a los destinatarios de Configuracion > Correos"
-              >
-                <Mail size={18} />
-                {sendingMail ? "Enviando..." : "Enviar por correo"}
-              </button>
-            </div>
-          </header>
+              <div className="toolbar">
+                <button
+                  type="button"
+                  className="head-button"
+                  onClick={sendMonthEmail}
+                  disabled={sendingMail}
+                  title="Envia el calendario del mes a los destinatarios de Configuracion > Correos"
+                >
+                  <Mail size={17} />
+                  {sendingMail ? "Enviando..." : "Enviar por correo"}
+                </button>
+                <button
+                  type="button"
+                  className="head-button primary"
+                  onClick={downloadMonth}
+                  disabled={!currentGuard}
+                  title={currentGuard ? `Descargar los ICS de ${currentGuard.name}` : "Liga tu correo en Configuracion"}
+                >
+                  <Download size={17} />
+                  Descargar mes
+                </button>
+              </div>
+            </header>
 
-          {notice ? (
-            <p className="notice" role="status">
-              {notice}
-            </p>
-          ) : null}
+            {notice ? (
+              <p className="notice" role="status">
+                {notice}
+              </p>
+            ) : null}
 
-          <div className="calendar-wrap">
-            <table className="guard-calendar refined" ref={calendarRef} style={{ "--shift-rows": shifts.length }}>
-              <thead>
-                <tr className="month-row">
-                  <th>Entrada</th>
-                  <th colSpan="6">
-                    {MONTHS[monthIndex]} {YEAR}
-                  </th>
-                </tr>
-                <tr>
-                  <th className="time-head"></th>
-                  {WEEKDAYS.map((day) => (
-                    <th key={day}>{day}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {monthWeeks.map((week, weekIndex) => (
-                  <React.Fragment key={weekIndex}>
-                    <tr className="date-row">
-                      <th></th>
-                      {week.map((date) => (
-                        <td
-                          key={date.toISOString()}
-                          className={[
-                            date.getMonth() === monthIndex ? "" : "outside",
-                            dayMarkerClasses(date, monthIndex, officeDays, closeDays),
-                          ].join(" ")}
-                        >
-                          <span>{date.getDate()}</span>
-                        </td>
-                      ))}
-                      <td className="audit-date-cell"></td>
-                    </tr>
-                    <tr className="schedule-row">
-                      <th>
-                        <div className="time-stack" style={{ gridTemplateRows: `repeat(${shifts.length}, 1fr)` }}>
-                          {shifts.map((shift) => (
-                            <span key={shift.id}>{formatShiftTime(shift.start)}</span>
-                          ))}
-                        </div>
-                      </th>
-                      {week.map((date) => {
-                        const key = dateKey(date);
-                        const isOutside = date.getMonth() !== monthIndex;
-                        const isHoliday = key in holidays;
-                        const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-                        const entries = schedule[key] ?? [];
-
-                        return (
+            <div className="calendar-wrap">
+              <table className="guard-calendar refined" ref={calendarRef} style={{ "--shift-rows": shifts.length }}>
+                <thead>
+                  <tr className="month-row">
+                    <th>Entrada</th>
+                    <th colSpan="6">
+                      {MONTHS[monthIndex]} {YEAR}
+                    </th>
+                  </tr>
+                  <tr>
+                    <th className="time-head"></th>
+                    {WEEKDAYS.map((day) => (
+                      <th key={day}>{day}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {monthWeeks.map((week, weekIndex) => (
+                    <React.Fragment key={weekIndex}>
+                      <tr className="date-row">
+                        <th></th>
+                        {week.map((date) => (
                           <td
-                            key={`${key}-schedule`}
+                            key={date.toISOString()}
                             className={[
-                              isOutside ? "outside" : "",
-                              isWeekend ? "weekend" : "",
-                              isHoliday ? "holiday" : "",
+                              date.getMonth() === monthIndex ? "" : "outside",
                               dayMarkerClasses(date, monthIndex, officeDays, closeDays),
                             ].join(" ")}
                           >
-                            {!isOutside && !isWeekend && !isHoliday ? (
-                              <div className="day-columns" style={{ gridTemplateRows: `repeat(${shifts.length}, 1fr)` }}>
-                                {guards.map((guard, guardIndex) => {
-                                  if (vacations[assignmentKey(key, guard.id)]) {
-                                    return (
-                                      <div
-                                        key={guard.id}
-                                        className="assignment-column vacation-column"
-                                        style={{ "--guard-color": guard.color, gridColumn: guardIndex + 1, gridRow: "1 / -1" }}
-                                        title={`${guard.name}: de vacaciones, no disponible.`}
-                                      >
-                                        <span className="vacation-initial">{guard.initials}</span>
-                                      </div>
-                                    );
-                                  }
-
-                                  const entry = entries.find((item) => item.guard.id === guard.id);
-                                  const currentAssignment =
-                                    assignments[assignmentKey(key, guard.id)] ?? entry?.id ?? "";
-                                  const selectedShift = shifts.find((item) => item.id === currentAssignment);
-                                  const span = selectedShift ? shifts.length - selectedShift.position : shifts.length;
-                                  const rowStart = selectedShift ? selectedShift.position + 1 : 1;
-
-                                  return (
-                                    <button
-                                      type="button"
-                                      key={guard.id}
-                                      className={[
-                                        "assignment-column",
-                                        !selectedShift ? "off-duty" : "",
-                                      ].join(" ")}
-                                      onClick={() => cycleAssignment(key, guard.id, currentAssignment)}
-                                      style={{
-                                        backgroundColor: selectedShift ? guard.color : undefined,
-                                        gridColumn: guardIndex + 1,
-                                        gridRow: `${rowStart} / span ${span}`,
-                                      }}
-                                      title={
-                                        selectedShift
-                                          ? `${guard.name}: ${selectedShift.start} - ${selectedShift.end}. Click para cambiar.`
-                                          : `${guard.name}: Sin guardia. Click para cambiar.`
-                                      }
-                                    >
-                                      {guard.initials}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            ) : isHoliday && !isOutside ? (
-                              <span className="no-class">{holidays[key] || "No hay Clases"}</span>
-                            ) : null}
+                            <span>{date.getDate()}</span>
                           </td>
-                        );
-                      })}
-                      <td className="audit-cell">
-                        {(() => {
-                          const auditGuard = getAuditGuardForWeek(week, guards, auditAssignments, auditRotations);
+                        ))}
+                        <td className="audit-date-cell"></td>
+                      </tr>
+                      <tr className="schedule-row">
+                        <th>
+                          <div className="time-stack" style={{ gridTemplateRows: `repeat(${shifts.length}, 1fr)` }}>
+                            {shifts.map((shift) => (
+                              <span key={shift.id}>{formatShiftTime(shift.start)}</span>
+                            ))}
+                          </div>
+                        </th>
+                        {week.map((date) => {
+                          const key = dateKey(date);
+                          const isOutside = date.getMonth() !== monthIndex;
+                          const isHoliday = key in holidays;
+                          const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                          const entries = schedule[key] ?? [];
+
                           return (
-                            <select
-                              className={["audit-select", auditGuard ? "" : "unassigned"].join(" ")}
-                              value={auditGuard?.id ?? ""}
-                              onChange={(event) => updateAuditAssignment(weekKey(week), event.target.value || null)}
-                              style={{ backgroundColor: auditGuard?.color }}
-                              title={
-                                auditGuard
-                                  ? `Auditorias: ${auditGuard.name}. Click para cambiar.`
-                                  : "Auditorias: sin asignar. Click para elegir."
-                              }
-                              aria-label={`Auditorias semana del ${weekKey(week)}`}
+                            <td
+                              key={`${key}-schedule`}
+                              className={[
+                                isOutside ? "outside" : "",
+                                isWeekend ? "weekend" : "",
+                                isHoliday ? "holiday" : "",
+                                dayMarkerClasses(date, monthIndex, officeDays, closeDays),
+                              ].join(" ")}
                             >
-                              <option value="">Sin asignar</option>
-                              {guards.map((guard) => (
-                                <option key={guard.id} value={guard.id}>
-                                  {guard.name}
-                                </option>
-                              ))}
-                            </select>
+                              {!isOutside && !isWeekend && !isHoliday ? (
+                                <div className="day-columns" style={{ gridTemplateRows: `repeat(${shifts.length}, 1fr)` }}>
+                                  {guards.map((guard, guardIndex) => {
+                                    if (vacations[assignmentKey(key, guard.id)]) {
+                                      return (
+                                        <div
+                                          key={guard.id}
+                                          className="assignment-column vacation-column"
+                                          style={{ "--guard-color": guard.color, gridColumn: guardIndex + 1, gridRow: "1 / -1" }}
+                                          title={`${guard.name}: de vacaciones, no disponible.`}
+                                        >
+                                          <span className="vacation-initial">{guard.initials}</span>
+                                        </div>
+                                      );
+                                    }
+
+                                    const entry = entries.find((item) => item.guard.id === guard.id);
+                                    const currentAssignment =
+                                      assignments[assignmentKey(key, guard.id)] ?? entry?.id ?? "";
+                                    const selectedShift = shifts.find((item) => item.id === currentAssignment);
+                                    const span = selectedShift ? shifts.length - selectedShift.position : shifts.length;
+                                    const rowStart = selectedShift ? selectedShift.position + 1 : 1;
+
+                                    return (
+                                      <button
+                                        type="button"
+                                        key={guard.id}
+                                        className={[
+                                          "assignment-column",
+                                          !selectedShift ? "off-duty" : "",
+                                        ].join(" ")}
+                                        onClick={() => cycleAssignment(key, guard.id, currentAssignment)}
+                                        style={{
+                                          backgroundColor: selectedShift ? guard.color : undefined,
+                                          gridColumn: guardIndex + 1,
+                                          gridRow: `${rowStart} / span ${span}`,
+                                        }}
+                                        title={
+                                          selectedShift
+                                            ? `${guard.name}: ${selectedShift.start} - ${selectedShift.end}. Click para cambiar.`
+                                            : `${guard.name}: Sin guardia. Click para cambiar.`
+                                        }
+                                      >
+                                        {guard.initials}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              ) : isHoliday && !isOutside ? (
+                                <span className="no-class">{holidays[key] || "No hay Clases"}</span>
+                              ) : null}
+                            </td>
                           );
-                        })()}
-                      </td>
-                    </tr>
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
+                        })}
+                        <td className="audit-cell">
+                          {(() => {
+                            const auditGuard = getAuditGuardForWeek(week, guards, auditAssignments, auditRotations);
+                            return (
+                              <select
+                                className={["audit-select", auditGuard ? "" : "unassigned"].join(" ")}
+                                value={auditGuard?.id ?? ""}
+                                onChange={(event) => updateAuditAssignment(weekKey(week), event.target.value || null)}
+                                style={{ backgroundColor: auditGuard?.color }}
+                                title={
+                                  auditGuard
+                                    ? `Auditorias: ${auditGuard.name}. Click para cambiar.`
+                                    : "Auditorias: sin asignar. Click para elegir."
+                                }
+                                aria-label={`Auditorias semana del ${weekKey(week)}`}
+                              >
+                                <option value="">Sin asignar</option>
+                                {guards.map((guard) => (
+                                  <option key={guard.id} value={guard.id}>
+                                    {guard.name}
+                                  </option>
+                                ))}
+                              </select>
+                            );
+                          })()}
+                        </td>
+                      </tr>
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div className="legend-bar refined" aria-label="Simbologia">

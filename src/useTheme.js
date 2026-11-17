@@ -87,3 +87,42 @@ export function useAccentMode() {
 
   return { accentMode, setAccentMode };
 }
+
+const STYLE_STORAGE_KEY = "calendario-estilo";
+// Estilos visuales disponibles en Configuracion > Apariencia.
+export const STYLE_MODES = ["clasico", "cristal"];
+
+function readStoredStyle() {
+  try {
+    const value = localStorage.getItem(STYLE_STORAGE_KEY);
+    return STYLE_MODES.includes(value) ? value : "clasico";
+  } catch {
+    return "clasico";
+  }
+}
+
+// Estilo de la app: "clasico" (tarjetas solidas) o "cristal" (tarjetas translucidas sobre un fondo
+// de color, ver src/themeGlass.css). Se pone en <html data-style="..."> y se guarda en este navegador.
+export function useStyleMode() {
+  const [styleMode, setStyleModeState] = useState(readStoredStyle);
+
+  useEffect(() => {
+    document.documentElement.dataset.style = styleMode;
+  }, [styleMode]);
+
+  function setStyleMode(mode) {
+    const next = STYLE_MODES.includes(mode) ? mode : "clasico";
+    setStyleModeState(next);
+    try {
+      if (next === "clasico") {
+        localStorage.removeItem(STYLE_STORAGE_KEY);
+      } else {
+        localStorage.setItem(STYLE_STORAGE_KEY, next);
+      }
+    } catch {
+      // Sin almacenamiento solo dura esta sesion.
+    }
+  }
+
+  return { styleMode, setStyleMode };
+}
