@@ -983,7 +983,9 @@ td.month-end-day.ms-close-day {
   inset: 0;
   z-index: 50;
   display: grid;
-  place-items: start center;
+  /* Centrada en la pantalla; "safe" la pega arriba si es mas alta que la ventana (para poder
+     hacer scroll sin que se corte el principio). */
+  place-items: safe center;
   padding: 24px 16px;
   overflow-y: auto;
   background: rgba(10, 30, 46, 0.45);
