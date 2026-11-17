@@ -11,6 +11,8 @@ import {
   Sun,
 } from "lucide-react";
 import "./styles.css";
+// Diseno refinado del calendario. Para regresar al anterior, quita esta linea.
+import "./calendarRefined.css";
 import Login from "./Login";
 import { SESSION_EXPIRED_EVENT, apiRequest } from "./apiClient";
 import { useCalendarData } from "./useCalendarData";
@@ -811,7 +813,7 @@ function App() {
           ) : null}
 
           <div className="calendar-wrap">
-            <table className="guard-calendar" ref={calendarRef} style={{ "--shift-rows": shifts.length }}>
+            <table className="guard-calendar refined" ref={calendarRef} style={{ "--shift-rows": shifts.length }}>
               <thead>
                 <tr className="month-row">
                   <th>Entrada</th>
@@ -956,7 +958,7 @@ function App() {
             </table>
           </div>
 
-          <div className="legend-bar" aria-label="Simbologia">
+          <div className="legend-bar refined" aria-label="Simbologia">
             <span>
               <i className="legend-swatch office"></i>
               Dias de oficina

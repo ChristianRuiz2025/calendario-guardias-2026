@@ -1,0 +1,187 @@
+/* Diseno "refinado" del calendario: misma tabla y mismo uso, con menos ruido visual.
+   Todo esta limitado a .guard-calendar.refined y .legend-bar.refined (los pone src/main.jsx).
+   Para regresar al diseno anterior basta con quitar el import de este archivo en main.jsx
+   (o revertir el PR que lo agrego). */
+
+.guard-calendar.refined {
+  width: 100%;
+  max-width: 1040px;
+  border-collapse: separate;
+  border-spacing: 5px 0;
+  padding: 6px 4px;
+}
+
+.guard-calendar.refined th,
+.guard-calendar.refined td {
+  border: 0;
+}
+
+/* El mes ya esta en el encabezado de la pagina. */
+.guard-calendar.refined .month-row {
+  display: none;
+}
+
+.guard-calendar.refined thead th {
+  height: 28px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.guard-calendar.refined thead tr:last-child th:first-child {
+  width: 52px;
+}
+
+.guard-calendar.refined thead tr:last-child th:last-child {
+  width: 124px;
+}
+
+.guard-calendar.refined .time-head {
+  background: transparent;
+}
+
+/* Numero del dia: parte de arriba de la tarjeta del dia. */
+.guard-calendar.refined .date-row th,
+.guard-calendar.refined .date-row td {
+  height: 24px;
+  padding: 4px 8px 0;
+  color: var(--text);
+  background: var(--surface-2);
+  text-align: left;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.guard-calendar.refined .date-row th,
+.guard-calendar.refined .date-row .audit-date-cell {
+  background: transparent;
+}
+
+.guard-calendar.refined .date-row td {
+  border-radius: 8px 8px 0 0;
+}
+
+/* Marcas de oficina, fin de mes y cierre MS: una linea arriba de la tarjeta en lugar del marco.
+   Si el dia tiene dos marcas, la linea va mitad de cada color. */
+.guard-calendar.refined .date-row td::before,
+.guard-calendar.refined .date-row td::after {
+  inset: 0 auto auto 0;
+  width: 50%;
+  height: 4px;
+  border: 0;
+  background: var(--mark-left, transparent);
+}
+
+.guard-calendar.refined .date-row td::before {
+  border-radius: 8px 0 0 0;
+}
+
+.guard-calendar.refined .date-row td::after {
+  left: 50%;
+  background: var(--mark-right, transparent);
+  border-radius: 0 8px 0 0;
+}
+
+.guard-calendar.refined .schedule-row td::before,
+.guard-calendar.refined .schedule-row td::after {
+  display: none;
+}
+
+.guard-calendar.refined .date-row td.outside {
+  color: var(--disabled-text);
+  background: transparent;
+}
+
+/* Turnos: parte de abajo de la tarjeta; el borde inferior transparente separa las semanas. */
+.guard-calendar.refined .schedule-row th {
+  padding-left: 4px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 0.74rem;
+  border-bottom: 10px solid transparent;
+}
+
+.guard-calendar.refined .schedule-row td {
+  background: var(--surface-2);
+  border-bottom: 10px solid var(--surface);
+  border-radius: 0 0 8px 8px;
+  background-clip: padding-box;
+}
+
+.guard-calendar.refined .schedule-row td.weekend,
+.guard-calendar.refined .schedule-row td.outside {
+  background: transparent;
+}
+
+.guard-calendar.refined .schedule-row td.holiday {
+  background: #d9a514;
+}
+
+.guard-calendar.refined .day-columns {
+  gap: 3px;
+  padding: 4px;
+}
+
+.guard-calendar.refined .assignment-column {
+  border-right: 0;
+  border-radius: 5px;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.guard-calendar.refined .assignment-column.off-duty {
+  background: var(--border-soft);
+  color: var(--disabled-text);
+}
+
+.guard-calendar.refined .vacation-column {
+  border-radius: 5px;
+}
+
+/* Auditorias: tarjeta del color de la persona, con el nombre sin cortar. */
+.guard-calendar.refined .schedule-row .audit-cell {
+  padding: 0;
+  background: transparent;
+  border-bottom: 10px solid var(--surface);
+}
+
+.guard-calendar.refined .audit-select {
+  border-right: 0;
+  border-radius: 8px;
+  padding: 0 4px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: none;
+}
+
+/* Simbologia: lineas de color como las de los dias. */
+.legend-bar.refined {
+  gap: 16px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.legend-bar.refined .legend-swatch {
+  width: 16px;
+  height: 4px;
+  border: 0;
+  border-radius: 2px;
+}
+
+.legend-bar.refined .legend-swatch.office {
+  background: #d92828;
+}
+
+.legend-bar.refined .legend-swatch.month-end {
+  background: #149a4f;
+}
+
+.legend-bar.refined .legend-swatch.ms-close {
+  background: #e0b400;
+}
+
+.legend-bar.refined .legend-swatch.vacation {
+  height: 14px;
+  border: 1px solid var(--muted);
+}
