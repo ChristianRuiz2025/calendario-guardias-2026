@@ -2,7 +2,8 @@
 // Configuracion > Correo del mes.
 //
 // Autenticacion: la sesion de la app (cookie de /api/auth).
-// Cuerpo: { "month": 0-11 (por defecto el mes actual), "image": "data:image/png;base64,..." (opcional) }
+// Cuerpo: { "month": 0-11 (por defecto el mes actual), "image": "data:image/png;base64,..." (opcional),
+//          "logo": "data:image/png;base64,..." (opcional, el logo de siclik CESA que va arriba del correo) }
 // Con "image" (la foto del calendario que toma la app) el correo lleva esa imagen incrustada;
 // sin ella, una tabla HTML con el mismo diseno.
 //
@@ -29,6 +30,8 @@ import { MONTH_NAMES, buildLegendHtml, buildMonthEmail, buildMonthWeeks } from "
 
 const YEAR = 2026;
 const IMAGE_CID = "calendario@guardias-cesa";
+const LOGO_CID = "logo@guardias-cesa";
+const MAX_LOGO_BYTES = 200 * 1024;
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 
 function useGraph() {
@@ -52,7 +55,16 @@ function withDeadline(promise, signal) {
 }
 
 // Envia con Microsoft Graph como el buzon `from` (flujo client credentials de la app de Azure).
-async function sendWithGraph({ from, to, cc, replyTo, subject, html, inlineImage }, signal) {
+// Imagenes incrustadas del correo: la foto del calendario y el logo, las que vengan.
+function inlineImages({ inlineImage, logoImage }) {
+  return [
+    inlineImage ? { name: "calendario.png", content: inlineImage, cid: IMAGE_CID } : null,
+    logoImage ? { name: "siclik-cesa.png", content: logoImage, cid: LOGO_CID } : null,
+  ].filter(Boolean);
+}
+
+async function sendWithGraph(message, signal) {
+  const { from, to, cc, replyTo, subject, html } = message;
   const tokenResponse = await fetch(
     `https://login.microsoftonline.com/${process.env.MS_TENANT_ID}/oauth2/v2.0/token`,
     {
@@ -84,18 +96,14 @@ async function sendWithGraph({ from, to, cc, replyTo, subject, html, inlineImage
         toRecipients: recipients(to),
         ccRecipients: recipients(cc),
         replyTo: replyTo ? recipients([replyTo]) : [],
-        attachments: inlineImage
-          ? [
-              {
-                "@odata.type": "#microsoft.graph.fileAttachment",
-                name: "calendario.png",
-                contentType: "image/png",
-                contentBytes: inlineImage.toString("base64"),
-                contentId: IMAGE_CID,
-                isInline: true,
-              },
-            ]
-          : [],
+        attachments: inlineImages(message).map((image) => ({
+          "@odata.type": "#microsoft.graph.fileAttachment",
+          name: image.name,
+          contentType: "image/png",
+          contentBytes: image.content.toString("base64"),
+          contentId: image.cid,
+          isInline: true,
+        })),
       },
       saveToSentItems: true,
     }),
@@ -106,7 +114,8 @@ async function sendWithGraph({ from, to, cc, replyTo, subject, html, inlineImage
   }
 }
 
-async function sendWithSmtp({ from, to, cc, replyTo, subject, html, text, inlineImage }, signal) {
+async function sendWithSmtp(message, signal) {
+  const { from, to, cc, replyTo, subject, html, text } = message;
   const port = Number(process.env.SMTP_PORT || 587);
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || "smtp.office365.com",
@@ -127,7 +136,7 @@ async function sendWithSmtp({ from, to, cc, replyTo, subject, html, text, inline
     subject,
     text,
     html,
-    attachments: inlineImage ? [{ filename: "calendario.png", content: inlineImage, cid: IMAGE_CID }] : [],
+    attachments: inlineImages(message).map((image) => ({ filename: image.name, content: image.content, cid: image.cid })),
   });
   // Si vence el tiempo, el envio termina con error despues; se ignora para que no quede sin atender.
   sending.catch(() => {});
@@ -161,6 +170,15 @@ export default async function handler(req, res) {
     inlineImage = match ? Buffer.from(match[1], "base64") : null;
     if (!inlineImage || inlineImage.length > MAX_IMAGE_BYTES) {
       return res.status(400).json({ error: "La imagen del calendario no es valida" });
+    }
+  }
+
+  let logoImage = null;
+  if (req.body?.logo) {
+    const match = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(req.body.logo);
+    logoImage = match ? Buffer.from(match[1], "base64") : null;
+    if (!logoImage || logoImage.length > MAX_LOGO_BYTES) {
+      return res.status(400).json({ error: "El logo no es valido" });
     }
   }
 
@@ -233,8 +251,15 @@ export default async function handler(req, res) {
     : email.html;
   const sentBy = sender?.name ?? sessionUser.email;
 
+  // Logo de siclik CESA arriba del correo (si la app lo mando).
+  const logoHtml = logoImage
+    ? `<div style="padding:12px 12px 0"><img src="cid:${LOGO_CID}" alt="siclik CESA" width="190" height="27" ` +
+      `style="display:block;width:190px;height:27px"></div>`
+    : "";
+
   const message = {
     inlineImage,
+    logoImage,
     from,
     to,
     cc,
@@ -248,7 +273,7 @@ export default async function handler(req, res) {
     html:
       `<!doctype html><html><head><meta charset="utf-8">` +
       `<meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light">` +
-      `</head><body style="margin:0;background:#ffffff">${html}` +
+      `</head><body style="margin:0;background:#ffffff">${logoHtml}${html}` +
       `<p style="font-family:Arial,sans-serif;font-size:12px;color:#5c758a;padding:0 12px">Enviado por ${sentBy
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")}.</p></body></html>`,
