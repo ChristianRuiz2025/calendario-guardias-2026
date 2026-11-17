@@ -13,6 +13,8 @@ const TIME = /^\d{2}:\d{2}$/;
 // Ids de personas, turnos y ordenes: UUID o claves cortas como "08-17" o "jona".
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
 const COLOR = /^#[0-9a-fA-F]{6}$/;
+// Comida: "YYYY-MM" aplica a todo el mes; "YYYY-MM-DD" es un dia en especifico.
+const LUNCH_PERIOD = /^\d{4}-\d{2}(-\d{2})?$/;
 const GUARD_FIELDS = ["name", "initials", "color", "email"];
 
 class BadRequest extends Error {}
@@ -72,6 +74,13 @@ async function existingShift(db, shiftId) {
     throw new BadRequest("El turno no existe");
   }
   return shiftId;
+}
+
+function lunchPeriod(value) {
+  if (!LUNCH_PERIOD.test(String(value ?? ""))) {
+    throw new BadRequest("El periodo de la comida debe ser YYYY-MM o YYYY-MM-DD");
+  }
+  return value;
 }
 
 function dayKeys(value) {
@@ -159,6 +168,7 @@ const OPERATIONS = {
     await db.query("DELETE FROM shift_assignments WHERE guard_id = ?", [guardId]);
     await db.query("DELETE FROM vacations WHERE guard_id = ?", [guardId]);
     await db.query("DELETE FROM audit_assignments WHERE guard_id = ?", [guardId]);
+    await db.query("DELETE FROM lunch_breaks WHERE guard_id = ?", [guardId]);
     await db.query("DELETE FROM guards WHERE id = ?", [guardId]);
   },
 
@@ -237,6 +247,26 @@ const OPERATIONS = {
     await db.query("DELETE FROM vacations WHERE guard_id = ? AND day_key IN (?)", [
       id(guardId, "La persona"),
       dayKeys(days),
+    ]);
+  },
+
+  async "lunch.set"(db, { guardId, periodKey, start, end }) {
+    const from = time(start, "la hora de inicio");
+    const to = time(end, "la hora de fin");
+    if (to <= from) {
+      throw new BadRequest("La comida debe terminar despues de empezar");
+    }
+    await db.query(
+      "INSERT INTO lunch_breaks (period_key, guard_id, start_time, end_time) VALUES (?, ?, ?, ?) " +
+        "ON DUPLICATE KEY UPDATE start_time = VALUES(start_time), end_time = VALUES(end_time)",
+      [lunchPeriod(periodKey), await existingGuard(db, guardId), from, to]
+    );
+  },
+
+  async "lunch.remove"(db, { guardId, periodKey }) {
+    await db.query("DELETE FROM lunch_breaks WHERE guard_id = ? AND period_key = ?", [
+      id(guardId, "La persona"),
+      lunchPeriod(periodKey),
     ]);
   },
 

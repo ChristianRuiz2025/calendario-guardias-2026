@@ -58,9 +58,22 @@ export function parseJson(value) {
   }
 }
 
+// Lee una tabla nueva sin romper el calendario si su script aun no se corre en la BD.
+async function optionalQuery(sql) {
+  try {
+    return await query(sql);
+  } catch (error) {
+    if (error?.code === "ER_NO_SUCH_TABLE") {
+      console.warn(`Falta una tabla (correr los scripts de mysql/): ${error.message}`);
+      return [];
+    }
+    throw error;
+  }
+}
+
 // Todo el calendario, con los mismos nombres de columnas que tenian las tablas de Supabase.
 export async function loadCalendar() {
-  const [guards, assignments, auditAssignments, shiftTemplates, holidays, settings, auditRotations, vacations] =
+  const [guards, assignments, auditAssignments, shiftTemplates, holidays, settings, auditRotations, vacations, lunches] =
     await Promise.all([
       query("SELECT id, name, initials, color, email, created_at FROM guards ORDER BY created_at, id"),
       query("SELECT day_key, guard_id, shift_id FROM shift_assignments"),
@@ -70,6 +83,7 @@ export async function loadCalendar() {
       query("SELECT `key`, `value` FROM app_settings"),
       query("SELECT id, start_date, end_date, guard_ids FROM audit_rotations ORDER BY start_date, id"),
       query("SELECT day_key, guard_id FROM vacations"),
+      optionalQuery("SELECT period_key, guard_id, start_time, end_time FROM lunch_breaks"),
     ]);
 
   return {
@@ -81,5 +95,6 @@ export async function loadCalendar() {
     settings: settings.map((row) => ({ key: row.key, value: parseJson(row.value) })),
     auditRotations: auditRotations.map((row) => ({ ...row, guard_ids: parseJson(row.guard_ids) ?? [] })),
     vacations,
+    lunches,
   };
 }

@@ -30,6 +30,9 @@ const MONTH_NAMES = [
   "Diciembre",
 ];
 
+// Azul predeterminado de la app (el --accent de styles.css).
+const DEFAULT_ACCENT = "#236996";
+
 const WEEKDAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
 // "2026-04-02" -> "Abril" (con el anio si no es el del calendario)
@@ -103,6 +106,9 @@ export default function SettingsModal({
   auditRotations,
   onSaveAuditRotation,
   onRemoveAuditRotation,
+  accentMode,
+  onUpdateAccentMode,
+  currentGuard,
 }) {
   const [newHolidayDate, setNewHolidayDate] = useState("");
   const [newHolidayName, setNewHolidayName] = useState("");
@@ -192,6 +198,48 @@ export default function SettingsModal({
         </header>
 
         <div className="modal-body">
+            <SettingsSection
+              {...section("appearance")}
+              title="Apariencia"
+              summary={accentMode === "profile" && currentGuard ? "Color de mi perfil" : "Azul predeterminado"}
+            >
+              <p className="settings-hint">Color de botones y encabezado. Se guarda solo en este navegador.</p>
+              <div className="accent-options" role="radiogroup" aria-label="Color de la aplicacion">
+                <button
+                  type="button"
+                  role="radio"
+                  className={accentMode === "default" ? "active" : ""}
+                  aria-checked={accentMode === "default"}
+                  onClick={() => onUpdateAccentMode("default")}
+                >
+                  <span className="accent-swatch" style={{ background: DEFAULT_ACCENT }} aria-hidden="true" />
+                  <span className="accent-option-text">
+                    <strong>Azul predeterminado</strong>
+                    <span>El color original de la app</span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  className={accentMode === "profile" ? "active" : ""}
+                  aria-checked={accentMode === "profile"}
+                  onClick={() => onUpdateAccentMode("profile")}
+                  disabled={!currentGuard}
+                  title={currentGuard ? undefined : "Liga tu correo en Guardias para usar tu color"}
+                >
+                  <span
+                    className="accent-swatch"
+                    style={{ background: currentGuard?.color ?? "var(--border)" }}
+                    aria-hidden="true"
+                  />
+                  <span className="accent-option-text">
+                    <strong>Color de mi perfil</strong>
+                    <span>{currentGuard ? `El color de ${currentGuard.name} en Guardias` : "Tu correo no esta ligado"}</span>
+                  </span>
+                </button>
+              </div>
+            </SettingsSection>
+
             <SettingsSection
               {...section("guards")}
               title="Guardias"

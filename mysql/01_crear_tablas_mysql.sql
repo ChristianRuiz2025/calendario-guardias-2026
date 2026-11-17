@@ -60,6 +60,16 @@ CREATE TABLE IF NOT EXISTS vacations (
   CONSTRAINT fk_vacations_guard FOREIGN KEY (guard_id) REFERENCES guards (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Horas de comida por persona. period_key "YYYY-MM" = todo el mes; "YYYY-MM-DD" = un dia.
+CREATE TABLE IF NOT EXISTS lunch_breaks (
+  period_key VARCHAR(10) NOT NULL,
+  guard_id VARCHAR(64) NOT NULL,
+  start_time CHAR(5) NOT NULL,
+  end_time CHAR(5) NOT NULL,
+  PRIMARY KEY (period_key, guard_id),
+  CONSTRAINT fk_lunch_breaks_guard FOREIGN KEY (guard_id) REFERENCES guards (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Ajustes: office_days, ms_close_day, mail_recipients
 CREATE TABLE IF NOT EXISTS app_settings (
   `key` VARCHAR(100) NOT NULL,

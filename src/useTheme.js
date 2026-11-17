@@ -55,3 +55,35 @@ export function useTheme() {
 
   return { theme, toggleTheme };
 }
+
+const ACCENT_STORAGE_KEY = "calendario-accent";
+
+function readStoredAccent() {
+  try {
+    return localStorage.getItem(ACCENT_STORAGE_KEY) === "default" ? "default" : "profile";
+  } catch {
+    return "profile";
+  }
+}
+
+// Color de acento: "profile" usa el color de la persona que inicio sesion,
+// "default" deja el azul de la app. La eleccion se guarda en este navegador.
+export function useAccentMode() {
+  const [accentMode, setAccentModeState] = useState(readStoredAccent);
+
+  function setAccentMode(mode) {
+    const next = mode === "default" ? "default" : "profile";
+    setAccentModeState(next);
+    try {
+      if (next === "default") {
+        localStorage.setItem(ACCENT_STORAGE_KEY, next);
+      } else {
+        localStorage.removeItem(ACCENT_STORAGE_KEY);
+      }
+    } catch {
+      // Sin almacenamiento solo dura esta sesion.
+    }
+  }
+
+  return { accentMode, setAccentMode };
+}

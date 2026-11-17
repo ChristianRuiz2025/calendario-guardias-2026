@@ -17,8 +17,10 @@ import { SESSION_EXPIRED_EVENT, apiRequest } from "./apiClient";
 import { useCalendarData } from "./useCalendarData";
 import SettingsModal from "./SettingsModal";
 import VacationPanel from "./VacationPanel";
-import { useTheme } from "./useTheme";
-import { buildCloseDays } from "./calendarRules";
+import LunchPanel from "./LunchPanel";
+import DownloadOptions, { useIcsKinds } from "./DownloadOptions";
+import { useAccentMode, useTheme } from "./useTheme";
+import { buildCloseDays, isWorkingDay } from "./calendarRules";
 import { dateKey, getAuditGuard, pad, startOfWorkWeek } from "./auditRotation";
 
 const YEAR = 2026;
@@ -270,6 +272,45 @@ function makeVacationEvents(vacations, guard, monthIndex, exportId, stamp) {
   return events;
 }
 
+// Un evento "Comida" (Ausente) por cada dia habil del mes sin vacaciones que tenga hora de comida.
+// El horario de un dia en especifico ("YYYY-MM-DD") reemplaza al del mes ("YYYY-MM").
+function makeLunchEvents(lunches, holidays, vacations, guard, monthIndex, exportId, stamp) {
+  const daysInMonth = new Date(YEAR, monthIndex + 1, 0).getDate();
+  const monthLunch = lunches[assignmentKey(`${YEAR}-${pad(monthIndex + 1)}`, guard.id)];
+  const events = [];
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const date = new Date(YEAR, monthIndex, day);
+    const key = dateKey(date);
+    const lunch = lunches[assignmentKey(key, guard.id)] ?? monthLunch;
+    if (!lunch || !isWorkingDay(date, holidays) || vacations[assignmentKey(key, guard.id)]) {
+      continue;
+    }
+
+    events.push(
+      [
+        "BEGIN:VEVENT",
+        `UID:${exportId}-comida-${key}-${guard.id}@guardias-2026`,
+        `DTSTAMP:${stamp}`,
+        `DTSTART;TZID=${TIMEZONE_ID}:${formatIcsDateTime(date, lunch.start)}`,
+        `DTEND;TZID=${TIMEZONE_ID}:${formatIcsDateTime(date, lunch.end)}`,
+        "SUMMARY:Comida",
+        `DESCRIPTION:${escapeIcsText(`Hora de comida de ${guard.name} (${lunch.start} - ${lunch.end}).`)}`,
+        "CATEGORIES:Comida",
+        "CLASS:PUBLIC",
+        "TRANSP:OPAQUE",
+        "STATUS:CONFIRMED",
+        "X-MICROSOFT-CDO-ALLDAYEVENT:FALSE",
+        "X-MICROSOFT-CDO-BUSYSTATUS:OOF",
+        "X-MICROSOFT-CDO-INTENDEDSTATUS:OOF",
+        "END:VEVENT",
+      ].join("\r\n")
+    );
+  }
+
+  return events;
+}
+
 function makeIcsCalendar(calendarName, events) {
   return [
     "BEGIN:VCALENDAR",
@@ -411,12 +452,17 @@ function App() {
     removeAuditRotation,
     addVacationDays,
     removeVacationDays,
+    lunches,
+    setLunch,
+    removeLunch,
   } = useCalendarData(Boolean(session));
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [sendingMail, setSendingMail] = useState(false);
   const calendarRef = useRef(null);
   const { theme, toggleTheme } = useTheme();
+  const { accentMode, setAccentMode } = useAccentMode();
+  const { kinds: icsKinds, toggleKind: toggleIcsKind } = useIcsKinds();
   const schedule = useMemo(
     () => buildSchedule(guards, assignments, shifts, holidays, vacations),
     [guards, assignments, shifts, holidays, vacations]
@@ -455,36 +501,60 @@ function App() {
     : undefined;
 
   useEffect(() => {
-    applyAccentColor(currentGuard?.color);
-  }, [currentGuard?.color]);
+    applyAccentColor(accentMode === "profile" ? currentGuard?.color : undefined);
+  }, [accentMode, currentGuard?.color]);
 
-  // Descarga los ICS del mes (guardias y auditorias) de la persona que inicio sesion.
+  // Descarga los ICS del mes marcados en "Descargar ICS" (turnos, vacaciones, comidas y
+  // auditorias) de la persona que inicio sesion. Los que no tienen eventos no se bajan.
   function downloadMonth() {
     if (!currentGuard) {
       return;
     }
     const guardName = currentGuard.name;
-    const calendarName = `Guardias ${guardName} - ${MONTHS[monthIndex]} ${YEAR}`;
-    const content = makeIcs(monthIndex, schedule, currentGuard.id, crypto.randomUUID(), calendarName);
+    const monthLabel = `${MONTHS[monthIndex]} ${YEAR}`;
     const guardSlug = guardName.toLowerCase().replace(/\s+/g, "-");
     const fileSuffix = `${guardSlug}-${YEAR}-${pad(monthIndex + 1)}-${MONTHS[monthIndex].toLowerCase()}.ics`;
-    downloadTextFile(`guardias-${fileSuffix}`, content);
-
     const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-    // Las descargas extra van con una pausa para que el navegador no las descarte.
-    const extraFiles = [];
-    const auditEvents = makeAuditEvents(auditWeeks, monthIndex, currentGuard.id, crypto.randomUUID(), stamp);
-    if (auditEvents.length > 0) {
-      const auditCalendarName = `Auditorias ${guardName} - ${MONTHS[monthIndex]} ${YEAR}`;
-      extraFiles.push([`auditorias-${fileSuffix}`, makeIcsCalendar(auditCalendarName, auditEvents)]);
+    const files = [];
+
+    if (icsKinds.includes("shifts")) {
+      const calendarName = `Guardias ${guardName} - ${monthLabel}`;
+      files.push([
+        `guardias-${fileSuffix}`,
+        makeIcs(monthIndex, schedule, currentGuard.id, crypto.randomUUID(), calendarName),
+      ]);
     }
-    const vacationEvents = makeVacationEvents(vacations, currentGuard, monthIndex, crypto.randomUUID(), stamp);
-    if (vacationEvents.length > 0) {
-      const vacationCalendarName = `Vacaciones ${guardName} - ${MONTHS[monthIndex]} ${YEAR}`;
-      extraFiles.push([`vacaciones-${fileSuffix}`, makeIcsCalendar(vacationCalendarName, vacationEvents)]);
+    if (icsKinds.includes("vacations")) {
+      const events = makeVacationEvents(vacations, currentGuard, monthIndex, crypto.randomUUID(), stamp);
+      if (events.length > 0) {
+        files.push([`vacaciones-${fileSuffix}`, makeIcsCalendar(`Vacaciones ${guardName} - ${monthLabel}`, events)]);
+      }
     }
-    extraFiles.forEach(([filename, fileContent], index) => {
-      setTimeout(() => downloadTextFile(filename, fileContent), 300 * (index + 1));
+    if (icsKinds.includes("lunches")) {
+      const events = makeLunchEvents(lunches, holidays, vacations, currentGuard, monthIndex, crypto.randomUUID(), stamp);
+      if (events.length > 0) {
+        files.push([`comida-${fileSuffix}`, makeIcsCalendar(`Comida ${guardName} - ${monthLabel}`, events)]);
+      }
+    }
+    if (icsKinds.includes("audits")) {
+      const events = makeAuditEvents(auditWeeks, monthIndex, currentGuard.id, crypto.randomUUID(), stamp);
+      if (events.length > 0) {
+        files.push([`auditorias-${fileSuffix}`, makeIcsCalendar(`Auditorias ${guardName} - ${monthLabel}`, events)]);
+      }
+    }
+
+    if (files.length === 0) {
+      setNotice(
+        icsKinds.length === 0
+          ? "Marca al menos un ICS en Descargar ICS."
+          : `No hay eventos en ${monthLabel} para los ICS marcados.`
+      );
+      setTimeout(() => setNotice(""), 10000);
+      return;
+    }
+    // Cada descarga va con una pausa para que el navegador no las descarte.
+    files.forEach(([filename, fileContent], index) => {
+      setTimeout(() => downloadTextFile(filename, fileContent), 300 * index);
     });
   }
 
@@ -596,15 +666,34 @@ function App() {
           </div>
 
           {currentGuard ? (
-            <VacationPanel
-              guard={currentGuard}
-              vacationDays={Object.keys(vacations)
-                .filter((key) => key.endsWith(`|${currentGuard.id}`))
-                .map((key) => key.split("|")[0])}
-              holidays={holidays}
-              onAdd={addVacationDays}
-              onRemove={removeVacationDays}
-            />
+            <div className="sidebar-stack">
+              <VacationPanel
+                guard={currentGuard}
+                vacationDays={Object.keys(vacations)
+                  .filter((key) => key.endsWith(`|${currentGuard.id}`))
+                  .map((key) => key.split("|")[0])}
+                holidays={holidays}
+                onAdd={addVacationDays}
+                onRemove={removeVacationDays}
+              />
+
+              <LunchPanel
+                key={currentGuard.id}
+                guard={currentGuard}
+                lunches={lunches}
+                holidays={holidays}
+                monthIndex={monthIndex}
+                onSet={setLunch}
+                onRemove={removeLunch}
+              />
+
+              <DownloadOptions
+                kinds={icsKinds}
+                onToggle={toggleIcsKind}
+                onDownload={downloadMonth}
+                monthName={MONTHS[monthIndex].toLowerCase()}
+              />
+            </div>
           ) : null}
 
           {currentGuard ? null : (
@@ -641,6 +730,9 @@ function App() {
             auditRotations={auditRotations}
             onSaveAuditRotation={saveAuditRotation}
             onRemoveAuditRotation={removeAuditRotation}
+            accentMode={accentMode}
+            onUpdateAccentMode={setAccentMode}
+            currentGuard={currentGuard}
           />
         ) : null}
 
