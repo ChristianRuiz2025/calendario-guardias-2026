@@ -102,6 +102,20 @@ const SETTINGS = {
     return [...new Set(value)].sort((a, b) => a - b);
   },
 
+  // Rotacion de oficina (src/officeRotation.js): { start: "YYYY-MM-DD", order: [ids] }.
+  office_rotation(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new BadRequest("La rotacion de oficina no es valida");
+    }
+    if (!Array.isArray(value.order) || value.order.length > 50) {
+      throw new BadRequest("El orden de la rotacion de oficina no es valido");
+    }
+    return {
+      start: dayKey(value.start, "la fecha de inicio"),
+      order: [...new Set(value.order.map((guardId) => id(guardId, "Una persona de la rotacion")))],
+    };
+  },
+
   ms_close_day(value) {
     if (!Number.isInteger(value) || value < 1 || value > 31) {
       throw new BadRequest("El dia de cierre debe ser un numero de 1 a 31");

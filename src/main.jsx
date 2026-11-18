@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { CalendarCheck, ChevronLeft, ChevronRight, Download, Mail } from "lucide-react";
+import { Building2, CalendarCheck, ChevronLeft, ChevronRight, Download, Mail } from "lucide-react";
 import "./styles.css";
 // Diseno refinado del calendario. Para regresar al anterior, quita esta linea.
 import "./calendarRefined.css";
@@ -22,6 +22,7 @@ import WeekMarks from "./WeekMarks";
 import { buildCloseDays, isWorkingDay } from "./calendarRules";
 import { dateKey, getAuditGuard, pad, startOfWorkWeek } from "./auditRotation";
 import { clampMonth, fromMonthNumber, monthNumber } from "./calendarYears";
+import { buildOfficeSchedule } from "./officeRotation";
 
 const TIMEZONE_ID = "America/Mexico_City";
 
@@ -462,6 +463,7 @@ function App() {
     shifts,
     holidays,
     officeDays,
+    officeRotation,
     msCloseDay,
     mailSettings,
     auditRotations,
@@ -477,6 +479,7 @@ function App() {
     addShift,
     removeShift,
     updateOfficeDays,
+    updateOfficeRotation,
     updateMsCloseDay,
     updateMailSettings,
     addHoliday,
@@ -503,6 +506,11 @@ function App() {
   );
   const closeDays = useMemo(() => buildCloseDays(year, holidays, msCloseDay), [year, holidays, msCloseDay]);
   const monthWeeks = useMemo(() => getMonthWeeks(year, monthIndex), [year, monthIndex]);
+  // Quien va a la oficina cada dia de oficina, hasta el ultimo dia que se ve.
+  const officeSchedule = useMemo(() => {
+    const lastDay = monthWeeks.at(-1)?.at(-1);
+    return lastDay ? buildOfficeSchedule(officeRotation, officeDays, holidays, guards, dateKey(lastDay)) : {};
+  }, [officeRotation, officeDays, holidays, guards, monthWeeks]);
   const auditWeeks = useMemo(
     () => buildAuditWeeks(year, guards, auditAssignments, auditRotations),
     [year, guards, auditAssignments, auditRotations]
@@ -801,6 +809,8 @@ function App() {
             onAddShift={addShift}
             onRemoveShift={removeShift}
             onUpdateOfficeDays={updateOfficeDays}
+            officeRotation={officeRotation}
+            onUpdateOfficeRotation={updateOfficeRotation}
             onUpdateMsCloseDay={updateMsCloseDay}
             onAddHoliday={addHoliday}
             onRemoveHoliday={removeHoliday}
@@ -893,6 +903,16 @@ function App() {
                             ].join(" ")}
                           >
                             <span>{date.getDate()}</span>
+                            {date.getMonth() === monthIndex && officeSchedule[dateKey(date)] ? (
+                              <span
+                                className="office-chip"
+                                style={{ "--chip-color": officeSchedule[dateKey(date)].color }}
+                                title={`Va a la oficina: ${officeSchedule[dateKey(date)].name}`}
+                              >
+                                <Building2 size={11} aria-hidden="true" />
+                                {officeSchedule[dateKey(date)].initials}
+                              </span>
+                            ) : null}
                           </td>
                         ))}
                         <td className="audit-date-cell"></td>

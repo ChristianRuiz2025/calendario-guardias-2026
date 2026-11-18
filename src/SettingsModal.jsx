@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   Building2,
+  Repeat,
   Monitor,
   Moon,
   Sun,
@@ -20,6 +21,8 @@ import AuditRotationEditor from "./AuditRotationEditor";
 import MailSettings from "./MailSettings.jsx";
 import { dateKey, findRotationGuard } from "./auditRotation";
 import { resolveRecipients } from "./mailSettings";
+import OfficeRotationEditor from "./OfficeRotationEditor";
+import { resolveOfficeOrder } from "./officeRotation";
 
 import { MAX_DATE, MIN_DATE } from "./calendarYears";
 
@@ -96,6 +99,7 @@ const NAV_GROUPS = [
     label: "Calendario",
     items: [
       { id: "office", label: "Dias de oficina", icon: Building2 },
+      { id: "officeRotation", label: "Rotacion de oficina", icon: Repeat },
       { id: "closes", label: "Cierres", icon: CalendarClock },
       { id: "holidays", label: "Dias feriados", icon: TreePalm },
     ],
@@ -144,6 +148,8 @@ export default function SettingsModal({
   onAddShift,
   onRemoveShift,
   onUpdateOfficeDays,
+  officeRotation,
+  onUpdateOfficeRotation,
   onUpdateMsCloseDay,
   onAddHoliday,
   onRemoveHoliday,
@@ -426,6 +432,24 @@ export default function SettingsModal({
                   </button>
                 ))}
               </div>
+            </SettingsSection>
+
+            <SettingsSection
+              {...section("officeRotation")}
+              title="Rotacion de oficina"
+              summary={
+                resolveOfficeOrder(officeRotation.order, guards)
+                  .map((guard) => guard.name)
+                  .join(" → ") || "Sin personas"
+              }
+            >
+              <OfficeRotationEditor
+                guards={guards}
+                officeDays={officeDays}
+                holidays={holidays}
+                rotation={officeRotation}
+                onSave={onUpdateOfficeRotation}
+              />
             </SettingsSection>
 
             <SettingsSection {...section("closes")} title="Cierres" summary={`Cierre MS dia ${msCloseDay}`}>
