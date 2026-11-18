@@ -57,19 +57,21 @@ export function useTheme() {
 
 const STYLE_STORAGE_KEY = "calendario-estilo";
 // Estilos visuales disponibles en Configuracion > Apariencia.
-export const STYLE_MODES = ["clasico", "cristal"];
+// "cesa" es el predeterminado.
+export const STYLE_MODES = ["cesa", "cristal", "papel", "pastel"];
+export const DEFAULT_STYLE = "cesa";
 
 function readStoredStyle() {
   try {
     const value = localStorage.getItem(STYLE_STORAGE_KEY);
-    return STYLE_MODES.includes(value) ? value : "clasico";
+    return STYLE_MODES.includes(value) ? value : DEFAULT_STYLE;
   } catch {
-    return "clasico";
+    return DEFAULT_STYLE;
   }
 }
 
-// Estilo de la app: "clasico" (tarjetas solidas) o "cristal" (tarjetas translucidas sobre un fondo
-// de color, ver src/themeGlass.css). Se pone en <html data-style="..."> y se guarda en este navegador.
+// Estilo de la app: "cesa" (se muestra como "Clasico"; predeterminado, src/themeCesa.css), "cristal"
+// (src/themeGlass.css), "papel" (src/themePaper.css) o "pastel" (src/themePastel.css). Se pone en <html data-style="..."> y se guarda en este navegador.
 export function useStyleMode() {
   const [styleMode, setStyleModeState] = useState(readStoredStyle);
 
@@ -78,10 +80,10 @@ export function useStyleMode() {
   }, [styleMode]);
 
   function setStyleMode(mode) {
-    const next = STYLE_MODES.includes(mode) ? mode : "clasico";
+    const next = STYLE_MODES.includes(mode) ? mode : DEFAULT_STYLE;
     setStyleModeState(next);
     try {
-      if (next === "clasico") {
+      if (next === DEFAULT_STYLE) {
         localStorage.removeItem(STYLE_STORAGE_KEY);
       } else {
         localStorage.setItem(STYLE_STORAGE_KEY, next);
@@ -92,39 +94,4 @@ export function useStyleMode() {
   }
 
   return { styleMode, setStyleMode };
-}
-
-const WEEK_MARK_STORAGE_KEY = "calendario-marca-auditoria";
-// Como se marca la semana de auditorias: sin marca, contorno con fondo suave o franja.
-export const WEEK_MARK_MODES = ["none", "tinted", "stripe"];
-
-function readStoredWeekMark() {
-  try {
-    const value = localStorage.getItem(WEEK_MARK_STORAGE_KEY);
-    return WEEK_MARK_MODES.includes(value) ? value : "none";
-  } catch {
-    return "none";
-  }
-}
-
-// Marca de la semana con el color de quien tiene auditorias (ver src/WeekMarks.jsx).
-// Se guarda en este navegador.
-export function useWeekMarkMode() {
-  const [weekMarkMode, setWeekMarkModeState] = useState(readStoredWeekMark);
-
-  function setWeekMarkMode(mode) {
-    const next = WEEK_MARK_MODES.includes(mode) ? mode : "none";
-    setWeekMarkModeState(next);
-    try {
-      if (next === "none") {
-        localStorage.removeItem(WEEK_MARK_STORAGE_KEY);
-      } else {
-        localStorage.setItem(WEEK_MARK_STORAGE_KEY, next);
-      }
-    } catch {
-      // Sin almacenamiento solo dura esta sesion.
-    }
-  }
-
-  return { weekMarkMode, setWeekMarkMode };
 }

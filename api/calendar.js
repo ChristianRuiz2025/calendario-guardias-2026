@@ -7,6 +7,7 @@ import { requireUser } from "./_lib/auth.js";
 import { getPool, loadCalendar } from "./_lib/db.js";
 import { DEFAULT_SHIFTS } from "../src/calendarDefaults.js";
 import { isValidEmail, normalizeMailSettings } from "../src/mailSettings.js";
+import { NO_SHIFT } from "../src/officeRotation.js";
 
 const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
 const TIME = /^\d{2}:\d{2}$/;
@@ -102,6 +103,20 @@ const SETTINGS = {
     return [...new Set(value)].sort((a, b) => a - b);
   },
 
+  // Rotacion de oficina (src/officeRotation.js): { start: "YYYY-MM-DD", order: [ids] }.
+  office_rotation(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new BadRequest("La rotacion de oficina no es valida");
+    }
+    if (!Array.isArray(value.order) || value.order.length > 50) {
+      throw new BadRequest("El orden de la rotacion de oficina no es valido");
+    }
+    return {
+      start: dayKey(value.start, "la fecha de inicio"),
+      order: [...new Set(value.order.map((guardId) => id(guardId, "Una persona de la rotacion")))],
+    };
+  },
+
   ms_close_day(value) {
     if (!Number.isInteger(value) || value < 1 || value > 31) {
       throw new BadRequest("El dia de cierre debe ser un numero de 1 a 31");
@@ -190,7 +205,8 @@ const OPERATIONS = {
       await db.query(
         "INSERT INTO shift_assignments (day_key, guard_id, shift_id) VALUES (?, ?, ?) " +
           "ON DUPLICATE KEY UPDATE shift_id = VALUES(shift_id)",
-        [...params, await existingShift(db, shiftId)]
+        // NO_SHIFT: "sin turno" a proposito en un dia con turno por defecto (rotacion de oficina).
+        [...params, shiftId === NO_SHIFT ? NO_SHIFT : await existingShift(db, shiftId)]
       );
     } else {
       await db.query("DELETE FROM shift_assignments WHERE day_key = ? AND guard_id = ?", params);

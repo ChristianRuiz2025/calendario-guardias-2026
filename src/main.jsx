@@ -4,8 +4,11 @@ import { CalendarCheck, ChevronLeft, ChevronRight, Download, Mail } from "lucide
 import "./styles.css";
 // Diseno refinado del calendario. Para regresar al anterior, quita esta linea.
 import "./calendarRefined.css";
-// Estilo "Cristal" de Configuracion > Apariencia (solo aplica con <html data-style="cristal">).
+// Estilos de Configuracion > Apariencia (cada uno solo aplica con su <html data-style="...">).
+import "./themeCesa.css";
 import "./themeGlass.css";
+import "./themePaper.css";
+import "./themePastel.css";
 import Login from "./Login";
 import { SESSION_EXPIRED_EVENT, apiRequest } from "./apiClient";
 import { useCalendarData } from "./useCalendarData";
@@ -14,14 +17,16 @@ import VacationPanel from "./VacationPanel";
 import { BrandMark } from "./BrandLogo";
 import SidebarMenu from "./SidebarMenu";
 import AppTooltip from "./AppTooltip";
+import AppDialog from "./AppDialog";
 import logoForEmail from "./assets/siclik-cesa.png";
 import LunchPanel from "./LunchPanel";
 import DownloadOptions, { useIcsKinds } from "./DownloadOptions";
-import { useStyleMode, useTheme, useWeekMarkMode } from "./useTheme";
+import { useStyleMode, useTheme } from "./useTheme";
 import WeekMarks from "./WeekMarks";
 import { buildCloseDays, isWorkingDay } from "./calendarRules";
 import { dateKey, getAuditGuard, pad, startOfWorkWeek } from "./auditRotation";
 import { clampMonth, fromMonthNumber, monthNumber } from "./calendarYears";
+import { NO_SHIFT, buildOfficeDefaults } from "./officeRotation";
 
 const TIMEZONE_ID = "America/Mexico_City";
 
@@ -462,6 +467,7 @@ function App() {
     shifts,
     holidays,
     officeDays,
+    officeRotation,
     msCloseDay,
     mailSettings,
     auditRotations,
@@ -477,6 +483,7 @@ function App() {
     addShift,
     removeShift,
     updateOfficeDays,
+    updateOfficeRotation,
     updateMsCloseDay,
     updateMailSettings,
     addHoliday,
@@ -495,11 +502,17 @@ function App() {
   const calendarRef = useRef(null);
   const { themeMode, setThemeMode } = useTheme();
   const { styleMode, setStyleMode } = useStyleMode();
-  const { weekMarkMode, setWeekMarkMode } = useWeekMarkMode();
   const { kinds: icsKinds, toggleKind: toggleIcsKind } = useIcsKinds();
+  // Turnos por defecto de los dias de oficina (rotacion de oficina); lo guardado en el calendario
+  // manda sobre ellos.
+  const officeDefaults = useMemo(
+    () => buildOfficeDefaults(officeRotation, officeDays, holidays, guards, shifts, `${year}-01-01`, `${year}-12-31`),
+    [officeRotation, officeDays, holidays, guards, shifts, year]
+  );
+  const effectiveAssignments = useMemo(() => ({ ...officeDefaults, ...assignments }), [officeDefaults, assignments]);
   const schedule = useMemo(
-    () => buildSchedule(year, guards, assignments, shifts, holidays, vacations),
-    [year, guards, assignments, shifts, holidays, vacations]
+    () => buildSchedule(year, guards, effectiveAssignments, shifts, holidays, vacations),
+    [year, guards, effectiveAssignments, shifts, holidays, vacations]
   );
   const closeDays = useMemo(() => buildCloseDays(year, holidays, msCloseDay), [year, holidays, msCloseDay]);
   const monthWeeks = useMemo(() => getMonthWeeks(year, monthIndex), [year, monthIndex]);
@@ -524,8 +537,14 @@ function App() {
       .finally(() => setSession(null));
   }
 
+  // Siguiente turno al dar clic. En un dia con turno por defecto, "sin turno" se guarda como
+  // NO_SHIFT (si se borrara, regresaria el turno por defecto).
   function cycleAssignment(dayKey, guardId, currentShiftId) {
-    updateAssignment(dayKey, guardId, nextShiftId(currentShiftId, shifts));
+    let next = currentShiftId === NO_SHIFT ? shifts[0].id : nextShiftId(currentShiftId, shifts);
+    if (!next && assignmentKey(dayKey, guardId) in officeDefaults) {
+      next = NO_SHIFT;
+    }
+    updateAssignment(dayKey, guardId, next);
   }
 
   // La persona que inicio sesion, ligada por el correo que tiene en Configuracion > Guardias.
@@ -596,33 +615,35 @@ function App() {
   async function sendMonthEmail() {
     setSendingMail(true);
     let message;
-    // Foto del calendario tal como se ve, para que el correo quede igual. Si falla, el
-    // servidor manda la tabla HTML.
+    // Foto del calendario para el correo. Se toma siempre igual para todos: estilo Clasico (CESA),
+    // modo claro y con la franja de auditorias (por eso se fotografia el contenedor, que incluye la
+    // capa de WeekMarks). Si falla, el servidor manda la tabla HTML.
     let image = null;
     const root = document.documentElement;
     const previousStyle = root.dataset.style;
+    const previousTheme = root.dataset.theme;
     try {
-      // El estilo cristal (translucido y con desenfoque) no sale bien en la foto: se toma con el clasico.
-      if (previousStyle && previousStyle !== "clasico") {
-        root.dataset.style = "clasico";
-        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-      }
+      root.dataset.style = "cesa";
+      root.dataset.theme = "light";
+      // Espera a que se pinte el estilo; si la pestana no esta visible (no hay cuadros), sigue a los 150 ms.
+      await new Promise((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(resolve));
+        setTimeout(resolve, 150);
+      });
       const { toPng } = await import("html-to-image");
-      const { width, height } = calendarRef.current.getBoundingClientRect();
-      image = await toPng(calendarRef.current, {
+      const target = calendarRef.current.parentElement;
+      const { width, height } = target.getBoundingClientRect();
+      image = await toPng(target, {
         pixelRatio: 2,
         width: Math.ceil(width),
         height: Math.ceil(height),
-        // La tabla esta centrada con margin auto; en la foto va pegada a la orilla.
-        style: { margin: "0" },
-        backgroundColor: getComputedStyle(document.body).backgroundColor,
+        backgroundColor: "#ffffff",
       });
     } catch (captureError) {
       console.error(captureError);
     } finally {
-      if (previousStyle) {
-        root.dataset.style = previousStyle;
-      }
+      root.dataset.style = previousStyle;
+      root.dataset.theme = previousTheme;
     }
     let logo = null;
     try {
@@ -801,6 +822,8 @@ function App() {
             onAddShift={addShift}
             onRemoveShift={removeShift}
             onUpdateOfficeDays={updateOfficeDays}
+            officeRotation={officeRotation}
+            onUpdateOfficeRotation={updateOfficeRotation}
             onUpdateMsCloseDay={updateMsCloseDay}
             onAddHoliday={addHoliday}
             onRemoveHoliday={removeHoliday}
@@ -809,8 +832,6 @@ function App() {
             onRemoveAuditRotation={removeAuditRotation}
             themeMode={themeMode}
             styleMode={styleMode}
-            weekMarkMode={weekMarkMode}
-            onUpdateWeekMarkMode={setWeekMarkMode}
             onUpdateStyleMode={setStyleMode}
             onUpdateThemeMode={setThemeMode}
             currentGuard={currentGuard}
@@ -858,7 +879,7 @@ function App() {
             <div className="calendar-wrap">
               <WeekMarks
                 tableRef={calendarRef}
-                mode={weekMarkMode}
+                mode="stripe"
                 colors={monthWeeks.map(
                   (week) => getAuditGuardForWeek(week, guards, auditAssignments, auditRotations)?.color ?? null
                 )}
@@ -940,7 +961,7 @@ function App() {
 
                                     const entry = entries.find((item) => item.guard.id === guard.id);
                                     const currentAssignment =
-                                      assignments[assignmentKey(key, guard.id)] ?? entry?.id ?? "";
+                                      effectiveAssignments[assignmentKey(key, guard.id)] ?? entry?.id ?? "";
                                     const selectedShift = shifts.find((item) => item.id === currentAssignment);
                                     const span = selectedShift ? shifts.length - selectedShift.position : shifts.length;
                                     const rowStart = selectedShift ? selectedShift.position + 1 : 1;
@@ -1047,5 +1068,6 @@ createRoot(document.getElementById("root")).render(
   <>
     <App />
     <AppTooltip />
+    <AppDialog />
   </>
 );

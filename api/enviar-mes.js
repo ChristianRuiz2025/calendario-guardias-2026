@@ -26,8 +26,9 @@ import {
   DEFAULT_SHIFTS,
 } from "../src/calendarDefaults.js";
 import { normalizeMailSettings, renderSubject, resolveRecipients } from "../src/mailSettings.js";
-import { MONTH_NAMES, buildLegendHtml, buildMonthEmail, buildMonthWeeks } from "../src/monthEmail.js";
+import { MONTH_NAMES, buildMonthEmail, buildMonthWeeks } from "../src/monthEmail.js";
 import { isValidYear } from "../src/calendarYears.js";
+import { buildOfficeDefaults, normalizeOfficeRotation } from "../src/officeRotation.js";
 
 const IMAGE_CID = "calendario@guardias-cesa";
 const LOGO_CID = "logo@guardias-cesa";
@@ -226,9 +227,19 @@ export default async function handler(req, res) {
     shifts,
     officeDays: Array.isArray(officeDays) ? officeDays : DEFAULT_OFFICE_DAYS,
     msCloseDay: Number.isInteger(msCloseDay) ? msCloseDay : DEFAULT_MS_CLOSE_DAY,
-    assignments: Object.fromEntries(
-      calendar.assignments.map((row) => [`${row.day_key}|${row.guard_id}`, row.shift_id])
-    ),
+    // Los turnos por defecto de la rotacion de oficina, y encima lo guardado (igual que en la app).
+    assignments: {
+      ...buildOfficeDefaults(
+        normalizeOfficeRotation(setting("office_rotation")),
+        Array.isArray(officeDays) ? officeDays : DEFAULT_OFFICE_DAYS,
+        Object.fromEntries(calendar.holidays.map((row) => [row.day_key, row.name ?? ""])),
+        guards,
+        shifts,
+        `${year}-01-01`,
+        `${year}-12-31`
+      ),
+      ...Object.fromEntries(calendar.assignments.map((row) => [`${row.day_key}|${row.guard_id}`, row.shift_id])),
+    },
     holidays: Object.fromEntries(calendar.holidays.map((row) => [row.day_key, row.name ?? ""])),
     vacations: Object.fromEntries(calendar.vacations.map((row) => [`${row.day_key}|${row.guard_id}`, true])),
     auditAssignments: Object.fromEntries(calendar.auditAssignments.map((row) => [row.week_key, row.guard_id])),
@@ -239,27 +250,46 @@ export default async function handler(req, res) {
     (guard) => (guard.email ?? "").trim().toLowerCase() === sessionUser.email?.toLowerCase()
   );
   const title = renderSubject(mailSettings, MONTH_NAMES[monthIndex], year);
-  const intro = mailSettings.message.trim()
-    ? `<p style="font-family:Arial,sans-serif;font-size:14px;color:#16212e;margin:0 0 12px">` +
+  // Tabla HTML de respaldo (si la app no pudo mandar la foto) y el texto plano del correo.
+  const email = buildMonthEmail({ title, monthLabel: `${MONTH_NAMES[monthIndex]} ${year}`, weeks, shifts, tableOnly: true });
+  const { text } = email;
+  const sentBy = sender?.name ?? sessionUser.email;
+  const monthLabel = `${MONTH_NAMES[monthIndex]} ${year}`;
+
+  // Diseno minimalista: franja roja de CESA a la izquierda, logo, mes, mensaje, la foto del calendario
+  // (igual a la app, estilo Clasico) y una linea de simbologia. Todo con tablas y estilos en linea,
+  // que es lo que Outlook muestra bien. Sin foto, va la tabla HTML de respaldo.
+  const FONT = "font-family:Arial,Helvetica,sans-serif";
+  const legendBar = (color) =>
+    `<span style="display:inline-block;width:14px;height:4px;background:${color};vertical-align:middle;margin-right:5px"></span>`;
+  const logoHtml = logoImage
+    ? `<img src="cid:${LOGO_CID}" alt="siclik CESA" width="150" height="21" ` +
+      `style="display:block;width:150px;height:21px;border:0;margin:0 0 16px">`
+    : "";
+  const introHtml = mailSettings.message.trim()
+    ? `<p style="${FONT};font-size:14px;line-height:1.5;color:#4b5563;margin:0 0 16px">` +
       `${escapeHtml(mailSettings.message.trim()).replace(/\n/g, "<br>")}</p>`
     : "";
-  const email = buildMonthEmail({ title, intro, monthLabel: `${MONTH_NAMES[monthIndex]} ${year}`, weeks, shifts });
-  const { text } = email;
-  // Con la foto del calendario, el correo es esa imagen (igual a la app) mas la simbologia.
-  const html = inlineImage
-    ? `<div style="background:#ffffff;padding:12px;max-width:760px">` +
-      `<p style="font-family:Arial,sans-serif;font-size:16px;font-weight:bold;color:#16212e;margin:0 0 10px">${escapeHtml(title)}</p>` +
-      intro +
-      `<img src="cid:${IMAGE_CID}" alt="${escapeHtml(title)}" width="720" style="display:block;width:100%;max-width:720px;height:auto">` +
-      `${buildLegendHtml()}</div>`
+  const calendarHtml = inlineImage
+    ? `<img src="cid:${IMAGE_CID}" alt="Calendario de guardias ${escapeHtml(monthLabel)}" width="720" ` +
+      `style="display:block;width:100%;max-width:720px;height:auto;border:0">`
     : email.html;
-  const sentBy = sender?.name ?? sessionUser.email;
-
-  // Logo de siclik CESA arriba del correo (si la app lo mando).
-  const logoHtml = logoImage
-    ? `<div style="padding:12px 12px 0"><img src="cid:${LOGO_CID}" alt="siclik CESA" width="190" height="27" ` +
-      `style="display:block;width:190px;height:27px"></div>`
-    : "";
+  const html =
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff">` +
+    `<tr><td style="padding:20px 16px">` +
+    `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:760px">` +
+    `<tr><td width="4" style="width:4px;background:#ea0a2a"></td>` +
+    `<td style="padding:4px 0 4px 20px">` +
+    logoHtml +
+    `<p style="${FONT};font-size:20px;font-weight:bold;color:#1f2328;margin:0 0 6px">${escapeHtml(monthLabel)}</p>` +
+    introHtml +
+    calendarHtml +
+    `<p style="${FONT};font-size:12px;color:#6b7280;margin:14px 0 0">` +
+    `${legendBar("#ea0a2a")}Oficina &nbsp;&nbsp; ${legendBar("#149a4f")}Fin de mes &nbsp;&nbsp; ` +
+    `${legendBar("#e0b400")}Cierre MS &nbsp;&nbsp; &#9636; Vacaciones</p>` +
+    `<p style="${FONT};font-size:12px;color:#9aa1ab;margin:14px 0 0">Enviado por ${escapeHtml(sentBy)} desde Calendario Guardias</p>` +
+    `</td></tr></table>` +
+    `</td></tr></table>`;
 
   const message = {
     inlineImage,
@@ -277,10 +307,7 @@ export default async function handler(req, res) {
     html:
       `<!doctype html><html><head><meta charset="utf-8">` +
       `<meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light">` +
-      `</head><body style="margin:0;background:#ffffff">${logoHtml}${html}` +
-      `<p style="font-family:Arial,sans-serif;font-size:12px;color:#5c758a;padding:0 12px">Enviado por ${sentBy
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")}.</p></body></html>`,
+      `</head><body style="margin:0;background:#ffffff">${html}</body></html>`,
   };
 
   try {

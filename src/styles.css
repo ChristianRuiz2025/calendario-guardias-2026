@@ -2461,38 +2461,12 @@ button.rotation-chip:hover {
   position: absolute;
 }
 
-/* Contorno y fondo suave alrededor de la semana (WeekMarks deja 4 px de aire alrededor). */
-.week-marks.tinted .week-mark {
-  box-sizing: border-box;
-  border: 2px solid var(--week-color);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--week-color) 18%, transparent);
-}
-
 /* Franja: barra de 5 px a la izquierda de la semana (junto a las horas). */
 .week-marks.stripe .week-mark {
   border-radius: 3px;
   background: var(--week-color);
 }
 
-/* Muestras de la opcion en Apariencia. */
-.week-mark-sample {
-  display: block;
-  width: 34px;
-  height: 20px;
-  border-radius: 6px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-}
-
-.week-mark-sample.tinted {
-  border: 2px solid #f38ba8;
-  background: color-mix(in srgb, #f38ba8 18%, transparent);
-}
-
-.week-mark-sample.stripe {
-  border-left: 5px solid #f38ba8;
-}
 
 /* Turnos y auditorias: resaltado negro al pasar el raton (y con teclado), en lugar del contorno
    de color que se quedaba al dar clic. */
@@ -2627,4 +2601,239 @@ button.rotation-chip:hover {
   background: color-mix(in srgb, var(--bg) 92%, transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+}
+
+/* Rotacion de oficina: chip con quien va a la oficina en el numero del dia (y en la vista previa). */
+.office-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  border-radius: 999px;
+  padding: 1px 7px;
+  background: var(--chip-color, var(--accent));
+  color: #111111;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.5;
+  vertical-align: 1px;
+}
+
+:root[data-theme="dark"] .office-chip {
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.office-rotation {
+  display: grid;
+  gap: 12px;
+}
+
+.office-rotation-start {
+  display: grid;
+  gap: 4px;
+  max-width: 220px;
+  color: var(--muted-strong);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.office-rotation-start input {
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 10px;
+  color: var(--text-input);
+  background: var(--surface-2);
+}
+
+.office-rotation-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.office-rotation-list li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 32px 32px 32px;
+  gap: 6px;
+  align-items: center;
+  border: 1px solid var(--border-soft);
+  border-left: 5px solid var(--guard-color);
+  border-radius: 8px;
+  padding: 5px 6px 5px 8px;
+  background: var(--surface-2);
+}
+
+.office-rotation-number {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--border-soft);
+  color: var(--muted-strong);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.office-rotation-name {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.office-rotation-list .icon-button {
+  width: 32px;
+  height: 32px;
+}
+
+.office-rotation-excluded {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.office-rotation-excluded button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: transparent;
+  color: var(--muted-strong);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.office-rotation-preview ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 6px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.office-rotation-preview li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 6px 8px;
+  color: var(--muted-strong);
+  font-size: 0.8rem;
+}
+
+.office-rotation-preview li .office-chip {
+  margin-left: 0;
+}
+
+.office-rotation-preview li strong {
+  color: var(--text);
+  font-size: 0.82rem;
+}
+
+.office-rotation-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Franja roja de CESA a la izquierda del titulo de la barra lateral, en todos los estilos (mas
+   especifico que las reglas de borde de cada estilo). */
+:root .sidebar .brand.compact {
+  border-left: 4px solid #ea0a2a;
+}
+
+/* Confirmaciones y avisos (src/AppDialog.jsx): toman el estilo de .modal de cada tema. */
+.app-dialog-backdrop {
+  z-index: 120;
+  place-items: center;
+}
+
+.modal.app-dialog {
+  max-width: 420px;
+  padding: 20px;
+  background: var(--surface);
+}
+
+.app-dialog-body {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.app-dialog-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.app-dialog.danger .app-dialog-icon {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.app-dialog h2 {
+  margin: 2px 0 6px;
+  color: var(--text);
+  font-size: 1.02rem;
+}
+
+.app-dialog p {
+  color: var(--muted-strong);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.app-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.app-dialog-button {
+  min-height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 16px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.app-dialog-button:hover {
+  border-color: var(--muted);
+}
+
+.app-dialog-button.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.app-dialog-button.primary.danger {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: #ffffff;
+}
+
+:root[data-theme="dark"] .app-dialog-button.primary.danger {
+  border-color: #c2384d;
+  background: #c2384d;
+}
+
+.app-dialog-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

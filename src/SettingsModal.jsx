@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   Building2,
+  Repeat,
   Monitor,
   Moon,
   Sun,
@@ -20,6 +21,9 @@ import AuditRotationEditor from "./AuditRotationEditor";
 import MailSettings from "./MailSettings.jsx";
 import { dateKey, findRotationGuard } from "./auditRotation";
 import { resolveRecipients } from "./mailSettings";
+import OfficeRotationEditor from "./OfficeRotationEditor";
+import { confirmDialog, isDialogOpen } from "./AppDialog";
+import { resolveOfficeOrder } from "./officeRotation";
 
 import { MAX_DATE, MIN_DATE } from "./calendarYears";
 
@@ -47,6 +51,14 @@ const MONTH_NAMES = [
 ];
 
 const THEME_LABELS = { system: "Automatico", light: "Claro", dark: "Oscuro" };
+
+// Estilos de Configuracion > Apariencia (ver src/useTheme.js); Clasico ("cesa") es el predeterminado.
+const STYLE_OPTIONS = [
+  { id: "cesa", label: "Clásico", hint: "Predeterminado: grises con el rojo de CESA" },
+  { id: "cristal", label: "Cristal", hint: "Translucido sobre fondo de color" },
+  { id: "papel", label: "Papel", hint: "Crema, letra tipo libro, como impreso" },
+  { id: "pastel", label: "Pastel", hint: "Tonos suaves y esquinas redondeadas" },
+];
 
 const WEEKDAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
@@ -96,6 +108,7 @@ const NAV_GROUPS = [
     label: "Calendario",
     items: [
       { id: "office", label: "Dias de oficina", icon: Building2 },
+      { id: "officeRotation", label: "Rotacion de oficina", icon: Repeat },
       { id: "closes", label: "Cierres", icon: CalendarClock },
       { id: "holidays", label: "Dias feriados", icon: TreePalm },
     ],
@@ -144,6 +157,8 @@ export default function SettingsModal({
   onAddShift,
   onRemoveShift,
   onUpdateOfficeDays,
+  officeRotation,
+  onUpdateOfficeRotation,
   onUpdateMsCloseDay,
   onAddHoliday,
   onRemoveHoliday,
@@ -154,8 +169,6 @@ export default function SettingsModal({
   onUpdateThemeMode,
   styleMode,
   onUpdateStyleMode,
-  weekMarkMode,
-  onUpdateWeekMarkMode,
   currentGuard,
 }) {
   const [newHolidayDate, setNewHolidayDate] = useState("");
@@ -197,7 +210,8 @@ export default function SettingsModal({
 
   useEffect(() => {
     function handleKeyDown(event) {
-      if (event.key === "Escape") {
+      // Si hay una confirmacion abierta, Escape solo cierra esa.
+      if (event.key === "Escape" && !isDialogOpen()) {
         onClose();
       }
     }
@@ -223,11 +237,27 @@ export default function SettingsModal({
     setNewHolidayName("");
   }
 
-  function confirmRemoveShift(shift) {
-    if (
-      window.confirm(`Eliminar el turno ${shiftLabel(shift)}? Los dias que lo tienen asignado quedaran sin guardia.`)
-    ) {
+  async function confirmRemoveShift(shift) {
+    const confirmed = await confirmDialog({
+      title: `Eliminar el turno ${shiftLabel(shift)}`,
+      message: "Los dias que tienen este turno asignado quedaran sin turno.",
+      confirmLabel: "Eliminar turno",
+      danger: true,
+    });
+    if (confirmed) {
       onRemoveShift(shift.id);
+    }
+  }
+
+  async function confirmRemoveGuard(guard) {
+    const confirmed = await confirmDialog({
+      title: `Eliminar a ${guard.name}`,
+      message: "Tambien se borraran sus turnos, vacaciones, comidas y semanas de auditorias. No se puede deshacer.",
+      confirmLabel: "Eliminar",
+      danger: true,
+    });
+    if (confirmed) {
+      onRemoveGuard(guard.id);
     }
   }
 
@@ -267,36 +297,26 @@ export default function SettingsModal({
             <SettingsSection
               {...section("appearance")}
               title="Apariencia"
-              summary={`${styleMode === "cristal" ? "Cristal" : "Clasico"} · ${THEME_LABELS[themeMode]}`}
+              summary={`${STYLE_OPTIONS.find((option) => option.id === styleMode)?.label ?? ""} · ${THEME_LABELS[themeMode]}`}
             >
               <p className="settings-subtitle">Estilo</p>
               <div className="accent-options" role="radiogroup" aria-label="Estilo de la aplicacion">
-                <button
-                  type="button"
-                  role="radio"
-                  className={styleMode === "clasico" ? "active" : ""}
-                  aria-checked={styleMode === "clasico"}
-                  onClick={() => onUpdateStyleMode("clasico")}
-                >
-                  <span className="style-swatch classic" aria-hidden="true" />
-                  <span className="accent-option-text">
-                    <strong>Clasico</strong>
-                    <span>Tarjetas solidas</span>
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  role="radio"
-                  className={styleMode === "cristal" ? "active" : ""}
-                  aria-checked={styleMode === "cristal"}
-                  onClick={() => onUpdateStyleMode("cristal")}
-                >
-                  <span className="style-swatch glass" aria-hidden="true" />
-                  <span className="accent-option-text">
-                    <strong>Cristal</strong>
-                    <span>Translucido sobre fondo de color</span>
-                  </span>
-                </button>
+                {STYLE_OPTIONS.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    role="radio"
+                    className={styleMode === option.id ? "active" : ""}
+                    aria-checked={styleMode === option.id}
+                    onClick={() => onUpdateStyleMode(option.id)}
+                  >
+                    <span className={`style-swatch ${option.id}`} aria-hidden="true" />
+                    <span className="accent-option-text">
+                      <strong>{option.label}</strong>
+                      <span>{option.hint}</span>
+                    </span>
+                  </button>
+                ))}
               </div>
 
               <p className="settings-subtitle">Tema</p>
@@ -320,31 +340,7 @@ export default function SettingsModal({
                   </button>
                 ))}
               </div>
-              <p className="settings-subtitle">Semana de auditorias</p>
-              <div className="theme-options" role="radiogroup" aria-label="Marca de la semana de auditorias">
-                {[
-                  { id: "none", label: "Sin marca", hint: "Como hasta ahora" },
-                  { id: "tinted", label: "Contorno y fondo", hint: "Borde y fondo suave del color" },
-                  { id: "stripe", label: "Franja", hint: "Barra de color a la izquierda" },
-                ].map(({ id, label, hint }) => (
-                  <button
-                    key={id}
-                    type="button"
-                    role="radio"
-                    className={weekMarkMode === id ? "active" : ""}
-                    aria-checked={weekMarkMode === id}
-                    onClick={() => onUpdateWeekMarkMode(id)}
-                  >
-                    <span className={`week-mark-sample ${id}`} aria-hidden="true" />
-                    <strong>{label}</strong>
-                    <span>{hint}</span>
-                  </button>
-                ))}
-              </div>
-              <p className="settings-hint">
-                Marca cada semana con el color de quien tiene auditorias. El estilo, el tema y esta marca se guardan
-                solo en este navegador.
-              </p>
+              <p className="settings-hint">El estilo y el tema se guardan solo en este navegador.</p>
             </SettingsSection>
 
             <SettingsSection
@@ -392,7 +388,7 @@ export default function SettingsModal({
                     />
                     <button
                       className="icon-button danger"
-                      onClick={() => onRemoveGuard(guard.id)}
+                      onClick={() => confirmRemoveGuard(guard)}
                       aria-label={`Eliminar ${guard.name}`}
                       title="Eliminar guardia"
                     >
@@ -426,6 +422,25 @@ export default function SettingsModal({
                   </button>
                 ))}
               </div>
+            </SettingsSection>
+
+            <SettingsSection
+              {...section("officeRotation")}
+              title="Rotacion de oficina"
+              summary={
+                resolveOfficeOrder(officeRotation.order, guards)
+                  .map((guard) => guard.name)
+                  .join(" → ") || "Sin personas"
+              }
+            >
+              <OfficeRotationEditor
+                guards={guards}
+                shifts={shifts}
+                officeDays={officeDays}
+                holidays={holidays}
+                rotation={officeRotation}
+                onSave={onUpdateOfficeRotation}
+              />
             </SettingsSection>
 
             <SettingsSection {...section("closes")} title="Cierres" summary={`Cierre MS dia ${msCloseDay}`}>

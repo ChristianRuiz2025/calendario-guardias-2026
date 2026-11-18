@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { apiRequest } from "./apiClient";
+import { alertDialog } from "./AppDialog";
 import { DEFAULT_AUDIT_ROTATIONS, rotationFromRow } from "./auditRotation";
 import { DEFAULT_MAIL_SETTINGS, normalizeMailSettings } from "./mailSettings";
+import { DEFAULT_OFFICE_ROTATION, normalizeOfficeRotation } from "./officeRotation";
 import { DEFAULT_HOLIDAYS, DEFAULT_MS_CLOSE_DAY, DEFAULT_OFFICE_DAYS, DEFAULT_SHIFTS } from "./calendarDefaults";
 
 // Cada cuanto se vuelven a leer los datos para ver los cambios de los demas.
@@ -43,6 +45,8 @@ export function useCalendarData(enabled) {
   const [shifts, setShifts] = useState(DEFAULT_SHIFTS);
   const [holidays, setHolidays] = useState(DEFAULT_HOLIDAYS);
   const [officeDays, setOfficeDays] = useState(DEFAULT_OFFICE_DAYS);
+  // Quien va a la oficina cada dia de oficina (ver src/officeRotation.js).
+  const [officeRotation, setOfficeRotation] = useState(DEFAULT_OFFICE_ROTATION);
   const [msCloseDay, setMsCloseDay] = useState(DEFAULT_MS_CLOSE_DAY);
   // Configuracion del correo del mes (ver src/mailSettings.js).
   const [mailSettings, setMailSettings] = useState(DEFAULT_MAIL_SETTINGS);
@@ -69,6 +73,7 @@ export function useCalendarData(enabled) {
     setHolidays(Object.fromEntries(data.holidays.map((row) => [row.day_key, row.name ?? ""])));
     const setting = (key) => data.settings.find((row) => row.key === key)?.value;
     setOfficeDays(Array.isArray(setting("office_days")) ? setting("office_days") : DEFAULT_OFFICE_DAYS);
+    setOfficeRotation(normalizeOfficeRotation(setting("office_rotation")));
     setMsCloseDay(Number.isInteger(setting("ms_close_day")) ? setting("ms_close_day") : DEFAULT_MS_CLOSE_DAY);
     setMailSettings(normalizeMailSettings(setting("mail_recipients")));
     setAuditRotations(data.auditRotations.map(rotationFromRow));
@@ -146,7 +151,7 @@ export function useCalendarData(enabled) {
       failed = true;
       console.error(saveError);
       if (saveError.status !== 401) {
-        window.alert(`No se pudo guardar el cambio: ${saveError.message}`);
+        alertDialog({ title: "No se pudo guardar el cambio", message: saveError.message });
       }
     } finally {
       pendingSaves.current -= 1;
@@ -237,6 +242,11 @@ export function useCalendarData(enabled) {
     save("setting.set", { key: "office_days", value: next });
   }
 
+  function updateOfficeRotation(rotation) {
+    setOfficeRotation(rotation);
+    save("setting.set", { key: "office_rotation", value: rotation });
+  }
+
   function updateMsCloseDay(day) {
     setMsCloseDay(day);
     save("setting.set", { key: "ms_close_day", value: day });
@@ -311,6 +321,7 @@ export function useCalendarData(enabled) {
     shifts,
     holidays,
     officeDays,
+    officeRotation,
     msCloseDay,
     mailSettings,
     auditRotations,
@@ -327,6 +338,7 @@ export function useCalendarData(enabled) {
     addShift,
     removeShift,
     updateOfficeDays,
+    updateOfficeRotation,
     updateMsCloseDay,
     updateMailSettings,
     addHoliday,

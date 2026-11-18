@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { ChevronRight, GripVertical, Pencil, Plus, Trash2, X } from "lucide-react";
 import { dateKey, findRotationGuard, parseDateKey } from "./auditRotation";
+import { confirmDialog } from "./AppDialog";
 
 // "2026-11-02" -> "2 de noviembre de 2026"
 function formatDate(value) {
@@ -81,8 +82,14 @@ export default function AuditRotationEditor({ guards, rotations, onSave, onRemov
     setForm(emptyForm(guards));
   }
 
-  function confirmRemove(rotation) {
-    if (window.confirm(`Eliminar el orden que empieza el ${formatDate(rotation.start)}?`)) {
+  async function confirmRemove(rotation) {
+    const confirmed = await confirmDialog({
+      title: "Eliminar orden de auditorias",
+      message: `Se eliminara el orden que empieza el ${formatDate(rotation.start)}. Las semanas que dependian de el se calcularan con los demas ordenes.`,
+      confirmLabel: "Eliminar",
+      danger: true,
+    });
+    if (confirmed) {
       onRemove(rotation.id);
       if (form.id === rotation.id) {
         setForm(emptyForm(guards));
