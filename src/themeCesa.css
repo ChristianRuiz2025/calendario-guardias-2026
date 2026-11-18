@@ -1,0 +1,69 @@
+/* Estilo "Marca CESA" (predeterminado, Configuracion > Apariencia): grises neutros con el rojo de
+   CESA en los detalles de marca (encabezado, boton principal y dias de oficina). Lo personal (Hoy,
+   mes elegido, resaltados) sigue con el color de cada persona. Solo aplica con
+   <html data-style="cesa">. */
+
+:root[data-style="cesa"]:not([data-theme="dark"]) {
+  --bg: #f2f3f5;
+  --surface: #ffffff;
+  --surface-2: #f6f7f9;
+  --border: #dfe2e7;
+  --border-soft: #eceef1;
+  --text: #1f2328;
+  --text-input: #2a2f36;
+  --muted: #6b7280;
+  --muted-strong: #4b5563;
+}
+
+:root[data-style="cesa"][data-theme="dark"] {
+  --bg: #121417;
+  --surface: #1b1e23;
+  --surface-2: #23272e;
+  --border: #323840;
+  --border-soft: #2a2f36;
+  --text: #eceef1;
+  --text-input: #e3e6ea;
+  --muted: #9aa1ab;
+  --muted-strong: #c3c8cf;
+}
+
+:root[data-style="cesa"] {
+  --cesa-red: #ea0a2a;
+}
+
+/* Encabezado de la barra lateral con la franja roja de la marca. */
+:root[data-style="cesa"] .brand.compact {
+  border-left: 4px solid var(--cesa-red);
+}
+
+/* Boton principal del calendario en rojo CESA. */
+:root[data-style="cesa"] .head-button.primary {
+  background: var(--cesa-red);
+  color: #ffffff;
+}
+
+:root[data-style="cesa"] .head-button.primary:hover:not(:disabled) {
+  background: #c80823;
+  box-shadow: none;
+}
+
+/* Dias de oficina en el rojo de la marca. */
+:root[data-style="cesa"] td.office-day {
+  --mark-left: var(--cesa-red);
+  --mark-right: var(--cesa-red);
+}
+
+:root[data-style="cesa"] td.office-day.month-end-day {
+  --mark-left: var(--cesa-red);
+  --mark-right: #149a4f;
+}
+
+:root[data-style="cesa"] td.office-day.ms-close-day,
+:root[data-style="cesa"] td.office-day.month-end-day.ms-close-day {
+  --mark-left: var(--cesa-red);
+  --mark-right: #e0b400;
+}
+
+:root[data-style="cesa"] .legend-bar.refined .legend-swatch.office {
+  background: var(--cesa-red);
+}

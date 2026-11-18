@@ -4,8 +4,11 @@ import { CalendarCheck, ChevronLeft, ChevronRight, Download, Mail } from "lucide
 import "./styles.css";
 // Diseno refinado del calendario. Para regresar al anterior, quita esta linea.
 import "./calendarRefined.css";
-// Estilo "Cristal" de Configuracion > Apariencia (solo aplica con <html data-style="cristal">).
+// Estilos de Configuracion > Apariencia (cada uno solo aplica con su <html data-style="...">).
+import "./themeCesa.css";
 import "./themeGlass.css";
+import "./themePaper.css";
+import "./themePastel.css";
 import Login from "./Login";
 import { SESSION_EXPIRED_EVENT, apiRequest } from "./apiClient";
 import { useCalendarData } from "./useCalendarData";
@@ -17,7 +20,7 @@ import AppTooltip from "./AppTooltip";
 import logoForEmail from "./assets/siclik-cesa.png";
 import LunchPanel from "./LunchPanel";
 import DownloadOptions, { useIcsKinds } from "./DownloadOptions";
-import { useStyleMode, useTheme, useWeekMarkMode } from "./useTheme";
+import { useStyleMode, useTheme } from "./useTheme";
 import WeekMarks from "./WeekMarks";
 import { buildCloseDays, isWorkingDay } from "./calendarRules";
 import { dateKey, getAuditGuard, pad, startOfWorkWeek } from "./auditRotation";
@@ -498,7 +501,6 @@ function App() {
   const calendarRef = useRef(null);
   const { themeMode, setThemeMode } = useTheme();
   const { styleMode, setStyleMode } = useStyleMode();
-  const { weekMarkMode, setWeekMarkMode } = useWeekMarkMode();
   const { kinds: icsKinds, toggleKind: toggleIcsKind } = useIcsKinds();
   // Turnos por defecto de los dias de oficina (rotacion de oficina); lo guardado en el calendario
   // manda sobre ellos.
@@ -827,8 +829,6 @@ function App() {
             onRemoveAuditRotation={removeAuditRotation}
             themeMode={themeMode}
             styleMode={styleMode}
-            weekMarkMode={weekMarkMode}
-            onUpdateWeekMarkMode={setWeekMarkMode}
             onUpdateStyleMode={setStyleMode}
             onUpdateThemeMode={setThemeMode}
             currentGuard={currentGuard}
@@ -876,7 +876,7 @@ function App() {
             <div className="calendar-wrap">
               <WeekMarks
                 tableRef={calendarRef}
-                mode={weekMarkMode}
+                mode="stripe"
                 colors={monthWeeks.map(
                   (week) => getAuditGuardForWeek(week, guards, auditAssignments, auditRotations)?.color ?? null
                 )}

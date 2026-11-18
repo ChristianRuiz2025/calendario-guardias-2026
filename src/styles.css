@@ -2461,38 +2461,12 @@ button.rotation-chip:hover {
   position: absolute;
 }
 
-/* Contorno y fondo suave alrededor de la semana (WeekMarks deja 4 px de aire alrededor). */
-.week-marks.tinted .week-mark {
-  box-sizing: border-box;
-  border: 2px solid var(--week-color);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--week-color) 18%, transparent);
-}
-
 /* Franja: barra de 5 px a la izquierda de la semana (junto a las horas). */
 .week-marks.stripe .week-mark {
   border-radius: 3px;
   background: var(--week-color);
 }
 
-/* Muestras de la opcion en Apariencia. */
-.week-mark-sample {
-  display: block;
-  width: 34px;
-  height: 20px;
-  border-radius: 6px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-}
-
-.week-mark-sample.tinted {
-  border: 2px solid #f38ba8;
-  background: color-mix(in srgb, #f38ba8 18%, transparent);
-}
-
-.week-mark-sample.stripe {
-  border-left: 5px solid #f38ba8;
-}
 
 /* Turnos y auditorias: resaltado negro al pasar el raton (y con teclado), en lugar del contorno
    de color que se quedaba al dar clic. */

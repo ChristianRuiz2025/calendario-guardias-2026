@@ -1,0 +1,77 @@
+/* Estilo "Pastel" (Configuracion > Apariencia): tonos suaves, esquinas muy redondeadas y sombras
+   ligeras. Solo aplica con <html data-style="pastel">. */
+
+:root[data-style="pastel"]:not([data-theme="dark"]) {
+  --bg: #fbf3f8;
+  --surface: #ffffff;
+  --surface-2: #f8f1fb;
+  --border: #eadff2;
+  --border-soft: #f1e9f6;
+  --text: #4a3d63;
+  --text-input: #4a3d63;
+  --muted: #8b7fa3;
+  --muted-strong: #6c5e88;
+  --accent-soft: #f1eafc;
+  --accent-text: #5b4a8a;
+}
+
+:root[data-style="pastel"][data-theme="dark"] {
+  --bg: #1f1a28;
+  --surface: #282233;
+  --surface-2: #2f283c;
+  --border: #43395a;
+  --border-soft: #362e47;
+  --text: #efe8fa;
+  --text-input: #efe8fa;
+  --muted: #b6a9cf;
+  --muted-strong: #d3c8e8;
+  --accent-soft: #3a3150;
+  --accent-text: #d9cbff;
+}
+
+/* Tarjetas muy redondeadas con sombra suave. */
+:root[data-style="pastel"] .panel,
+:root[data-style="pastel"] .brand,
+:root[data-style="pastel"] .calendar-card,
+:root[data-style="pastel"] .legend-bar,
+:root[data-style="pastel"] .sidebar-menu-list,
+:root[data-style="pastel"] .modal,
+:root[data-style="pastel"] .today-button,
+:root[data-style="pastel"] .app-tooltip {
+  border-radius: 18px;
+  box-shadow: 0 6px 18px rgba(170, 140, 200, 0.18);
+}
+
+:root[data-style="pastel"] .guard-calendar.refined .date-row td {
+  border-radius: 14px 14px 0 0;
+}
+
+:root[data-style="pastel"] .guard-calendar.refined .schedule-row td {
+  border-radius: 0 0 14px 14px;
+}
+
+:root[data-style="pastel"] .guard-calendar.refined .assignment-column,
+:root[data-style="pastel"] .guard-calendar.refined td.holiday .no-class {
+  border-radius: 9px;
+}
+
+:root[data-style="pastel"] .guard-calendar.refined .audit-select {
+  border-radius: 14px;
+}
+
+/* "Mis cosas" conserva las esquinas de en medio rectas. */
+:root[data-style="pastel"] .sidebar-stack .sidebar-collapsible + .sidebar-collapsible {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+:root[data-style="pastel"] .sidebar-stack .sidebar-collapsible:has(+ .sidebar-collapsible) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* Colores de turno mas suaves. */
+:root[data-style="pastel"] .guard-calendar .assignment-column:not(.off-duty),
+:root[data-style="pastel"] .guard-calendar .audit-select:not(.unassigned) {
+  filter: saturate(0.7) brightness(1.06);
+}

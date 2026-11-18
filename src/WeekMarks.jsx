@@ -1,9 +1,6 @@
 import React, { useEffect, useState } from "react";
 
-// Marca cada semana del calendario con el color de quien tiene auditorias (Configuracion >
-// Apariencia > Semana de auditorias):
-//   "tinted"  contorno y fondo suave del color alrededor de la semana
-//   "stripe"  solo una franja de color a la izquierda
+// Franja de color a la izquierda de cada semana con el color de quien tiene auditorias.
 // Se dibuja como capa detras de la tabla (no es parte de ella), asi que no sale en la foto del
 // correo. tableRef: la tabla del calendario; colors: el color de cada semana (o null).
 export default function WeekMarks({ tableRef, colors, mode }) {
@@ -39,12 +36,8 @@ export default function WeekMarks({ tableRef, colors, mode }) {
           width: top.width,
           height: bottom.bottom - top.top - gap,
         };
-        // Contorno: 3-4 px de aire alrededor (deja separacion entre semanas). Franja: barra de 5 px pegada a la izquierda.
-        next.push(
-          mode === "stripe"
-            ? { ...box, left: box.left - 7, width: 5 }
-            : { top: box.top - 3, left: box.left - 4, width: box.width + 8, height: box.height + 6 }
-        );
+        // Barra de 5 px pegada a la izquierda de la semana.
+        next.push({ ...box, left: box.left - 7, width: 5 });
       });
       setBoxes(next);
     }

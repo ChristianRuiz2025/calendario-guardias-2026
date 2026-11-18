@@ -117,11 +117,26 @@
   border: 1px solid var(--border);
 }
 
-.style-swatch.classic {
-  background: var(--surface);
+.style-swatch.clasico {
+  background: linear-gradient(135deg, #eef3f7 50%, #236996 50%);
 }
 
-.style-swatch.glass {
+.style-swatch.cesa {
+  background: linear-gradient(135deg, #f2f3f5 60%, #ea0a2a 60%);
+}
+
+.style-swatch.papel {
+  background: #f6f1e7;
+  border-color: #d9cfbb;
+  border-radius: 3px;
+}
+
+.style-swatch.pastel {
+  background: linear-gradient(135deg, #f8f1fb 50%, #d8c6f5 50%);
+  border-radius: 12px;
+}
+
+.style-swatch.cristal {
   background:
     radial-gradient(circle at 25% 25%, rgba(90, 150, 255, 0.8), transparent 60%),
     radial-gradient(circle at 80% 80%, rgba(255, 120, 160, 0.8), transparent 60%),
