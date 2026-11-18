@@ -17,6 +17,7 @@ import VacationPanel from "./VacationPanel";
 import { BrandMark } from "./BrandLogo";
 import SidebarMenu from "./SidebarMenu";
 import AppTooltip from "./AppTooltip";
+import AppDialog from "./AppDialog";
 import logoForEmail from "./assets/siclik-cesa.png";
 import LunchPanel from "./LunchPanel";
 import DownloadOptions, { useIcsKinds } from "./DownloadOptions";
@@ -1065,5 +1066,6 @@ createRoot(document.getElementById("root")).render(
   <>
     <App />
     <AppTooltip />
+    <AppDialog />
   </>
 );

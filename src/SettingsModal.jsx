@@ -22,6 +22,7 @@ import MailSettings from "./MailSettings.jsx";
 import { dateKey, findRotationGuard } from "./auditRotation";
 import { resolveRecipients } from "./mailSettings";
 import OfficeRotationEditor from "./OfficeRotationEditor";
+import { confirmDialog, isDialogOpen } from "./AppDialog";
 import { resolveOfficeOrder } from "./officeRotation";
 
 import { MAX_DATE, MIN_DATE } from "./calendarYears";
@@ -209,7 +210,8 @@ export default function SettingsModal({
 
   useEffect(() => {
     function handleKeyDown(event) {
-      if (event.key === "Escape") {
+      // Si hay una confirmacion abierta, Escape solo cierra esa.
+      if (event.key === "Escape" && !isDialogOpen()) {
         onClose();
       }
     }
@@ -235,11 +237,27 @@ export default function SettingsModal({
     setNewHolidayName("");
   }
 
-  function confirmRemoveShift(shift) {
-    if (
-      window.confirm(`Eliminar el turno ${shiftLabel(shift)}? Los dias que lo tienen asignado quedaran sin guardia.`)
-    ) {
+  async function confirmRemoveShift(shift) {
+    const confirmed = await confirmDialog({
+      title: `Eliminar el turno ${shiftLabel(shift)}`,
+      message: "Los dias que tienen este turno asignado quedaran sin turno.",
+      confirmLabel: "Eliminar turno",
+      danger: true,
+    });
+    if (confirmed) {
       onRemoveShift(shift.id);
+    }
+  }
+
+  async function confirmRemoveGuard(guard) {
+    const confirmed = await confirmDialog({
+      title: `Eliminar a ${guard.name}`,
+      message: "Tambien se borraran sus turnos, vacaciones, comidas y semanas de auditorias. No se puede deshacer.",
+      confirmLabel: "Eliminar",
+      danger: true,
+    });
+    if (confirmed) {
+      onRemoveGuard(guard.id);
     }
   }
 
@@ -370,7 +388,7 @@ export default function SettingsModal({
                     />
                     <button
                       className="icon-button danger"
-                      onClick={() => onRemoveGuard(guard.id)}
+                      onClick={() => confirmRemoveGuard(guard)}
                       aria-label={`Eliminar ${guard.name}`}
                       title="Eliminar guardia"
                     >

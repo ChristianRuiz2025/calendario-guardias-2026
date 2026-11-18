@@ -2748,3 +2748,92 @@ button.rotation-chip:hover {
 :root .sidebar .brand.compact {
   border-left: 4px solid #ea0a2a;
 }
+
+/* Confirmaciones y avisos (src/AppDialog.jsx): toman el estilo de .modal de cada tema. */
+.app-dialog-backdrop {
+  z-index: 120;
+  place-items: center;
+}
+
+.modal.app-dialog {
+  max-width: 420px;
+  padding: 20px;
+  background: var(--surface);
+}
+
+.app-dialog-body {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.app-dialog-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.app-dialog.danger .app-dialog-icon {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.app-dialog h2 {
+  margin: 2px 0 6px;
+  color: var(--text);
+  font-size: 1.02rem;
+}
+
+.app-dialog p {
+  color: var(--muted-strong);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.app-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.app-dialog-button {
+  min-height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 16px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.app-dialog-button:hover {
+  border-color: var(--muted);
+}
+
+.app-dialog-button.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.app-dialog-button.primary.danger {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: #ffffff;
+}
+
+:root[data-theme="dark"] .app-dialog-button.primary.danger {
+  border-color: #c2384d;
+  background: #c2384d;
+}
+
+.app-dialog-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

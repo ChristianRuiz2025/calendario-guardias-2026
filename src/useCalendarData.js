@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { apiRequest } from "./apiClient";
+import { alertDialog } from "./AppDialog";
 import { DEFAULT_AUDIT_ROTATIONS, rotationFromRow } from "./auditRotation";
 import { DEFAULT_MAIL_SETTINGS, normalizeMailSettings } from "./mailSettings";
 import { DEFAULT_OFFICE_ROTATION, normalizeOfficeRotation } from "./officeRotation";
@@ -150,7 +151,7 @@ export function useCalendarData(enabled) {
       failed = true;
       console.error(saveError);
       if (saveError.status !== 401) {
-        window.alert(`No se pudo guardar el cambio: ${saveError.message}`);
+        alertDialog({ title: "No se pudo guardar el cambio", message: saveError.message });
       }
     } finally {
       pendingSaves.current -= 1;
