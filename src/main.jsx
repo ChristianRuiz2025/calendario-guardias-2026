@@ -615,33 +615,35 @@ function App() {
   async function sendMonthEmail() {
     setSendingMail(true);
     let message;
-    // Foto del calendario tal como se ve, para que el correo quede igual. Si falla, el
-    // servidor manda la tabla HTML.
+    // Foto del calendario para el correo. Se toma siempre igual para todos: estilo Clasico (CESA),
+    // modo claro y con la franja de auditorias (por eso se fotografia el contenedor, que incluye la
+    // capa de WeekMarks). Si falla, el servidor manda la tabla HTML.
     let image = null;
     const root = document.documentElement;
     const previousStyle = root.dataset.style;
+    const previousTheme = root.dataset.theme;
     try {
-      // La foto se toma con los estilos base (solidos): el cristal y los demas no salen bien en la imagen.
-      if (previousStyle) {
-        root.dataset.style = "foto";
-        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-      }
+      root.dataset.style = "cesa";
+      root.dataset.theme = "light";
+      // Espera a que se pinte el estilo; si la pestana no esta visible (no hay cuadros), sigue a los 150 ms.
+      await new Promise((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(resolve));
+        setTimeout(resolve, 150);
+      });
       const { toPng } = await import("html-to-image");
-      const { width, height } = calendarRef.current.getBoundingClientRect();
-      image = await toPng(calendarRef.current, {
+      const target = calendarRef.current.parentElement;
+      const { width, height } = target.getBoundingClientRect();
+      image = await toPng(target, {
         pixelRatio: 2,
         width: Math.ceil(width),
         height: Math.ceil(height),
-        // La tabla esta centrada con margin auto; en la foto va pegada a la orilla.
-        style: { margin: "0" },
-        backgroundColor: getComputedStyle(document.body).backgroundColor,
+        backgroundColor: "#ffffff",
       });
     } catch (captureError) {
       console.error(captureError);
     } finally {
-      if (previousStyle) {
-        root.dataset.style = previousStyle;
-      }
+      root.dataset.style = previousStyle;
+      root.dataset.theme = previousTheme;
     }
     let logo = null;
     try {
