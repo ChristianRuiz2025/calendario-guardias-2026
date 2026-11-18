@@ -18,6 +18,8 @@ const LUNCH_PERIOD = /^\d{4}-\d{2}(-\d{2})?$/;
 const GUARD_FIELDS = ["name", "initials", "color", "email"];
 
 class BadRequest extends Error {}
+// La peticion es valida pero la persona no tiene permiso (403).
+class Forbidden extends Error {}
 
 function text(value, name, { max = 255, optional = false } = {}) {
   if (value === null || value === undefined || value === "") {
@@ -172,8 +174,17 @@ const OPERATIONS = {
     await db.query("DELETE FROM guards WHERE id = ?", [guardId]);
   },
 
-  async "assignment.set"(db, { dayKey: day, guardId, shiftId }) {
+  // Solo la persona que inicio sesion puede cambiar sus propios turnos (se liga por el correo de
+  // Configuracion > Guardias).
+  async "assignment.set"(db, { dayKey: day, guardId, shiftId }, user) {
     const params = [dayKey(day), id(guardId, "La persona")];
+    const [[owner]] = await db.query("SELECT email FROM guards WHERE id = ? LIMIT 1", [guardId]);
+    if (!owner) {
+      throw new BadRequest("La persona no existe");
+    }
+    if (String(owner.email ?? "").trim().toLowerCase() !== String(user?.email ?? "").trim().toLowerCase()) {
+      throw new Forbidden("Solo puedes cambiar tus propios turnos.");
+    }
     if (shiftId) {
       await existingGuard(db, guardId);
       await db.query(
@@ -300,7 +311,8 @@ const OPERATIONS = {
 
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
-  if (!(await requireUser(req, res))) {
+  const user = await requireUser(req, res);
+  if (!user) {
     return undefined;
   }
 
@@ -327,13 +339,16 @@ export default async function handler(req, res) {
   try {
     connection = await getPool().getConnection();
     await connection.beginTransaction();
-    await operation(connection, req.body);
+    await operation(connection, req.body, user);
     await connection.commit();
     return res.status(200).json({ ok: true });
   } catch (opError) {
     await connection?.rollback().catch(() => {});
     if (opError instanceof BadRequest) {
       return res.status(400).json({ error: opError.message });
+    }
+    if (opError instanceof Forbidden) {
+      return res.status(403).json({ error: opError.message });
     }
     console.error(opError);
     return res.status(500).json({ error: "No se pudo guardar el cambio." });

@@ -4,7 +4,7 @@ import CollapsiblePanel from "./CollapsiblePanel";
 import { dateKey, parseDateKey } from "./auditRotation";
 import { isWorkingDay } from "./calendarRules";
 
-const YEAR = 2026;
+import { MAX_DATE, MIN_DATE } from "./calendarYears";
 
 const MONTH_NAMES = [
   "enero",
@@ -100,8 +100,8 @@ export default function VacationPanel({ guard, vacationDays, holidays, onAdd, on
           Desde
           <input
             type="date"
-            min={`${YEAR}-01-01`}
-            max={`${YEAR}-12-31`}
+            min={MIN_DATE}
+            max={MAX_DATE}
             value={start}
             onChange={(event) => {
               setStart(event.target.value);
@@ -113,8 +113,8 @@ export default function VacationPanel({ guard, vacationDays, holidays, onAdd, on
           Hasta
           <input
             type="date"
-            min={start || `${YEAR}-01-01`}
-            max={`${YEAR}-12-31`}
+            min={start || MIN_DATE}
+            max={MAX_DATE}
             value={end}
             onChange={(event) => {
               setEnd(event.target.value);

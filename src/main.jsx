@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { ChevronLeft, ChevronRight, Download, Mail } from "lucide-react";
+import { CalendarCheck, ChevronLeft, ChevronRight, Download, Mail } from "lucide-react";
 import "./styles.css";
 // Diseno refinado del calendario. Para regresar al anterior, quita esta linea.
 import "./calendarRefined.css";
@@ -13,6 +13,7 @@ import SettingsModal from "./SettingsModal";
 import VacationPanel from "./VacationPanel";
 import { BrandMark } from "./BrandLogo";
 import SidebarMenu from "./SidebarMenu";
+import AppTooltip from "./AppTooltip";
 import logoForEmail from "./assets/siclik-cesa.png";
 import LunchPanel from "./LunchPanel";
 import DownloadOptions, { useIcsKinds } from "./DownloadOptions";
@@ -20,8 +21,8 @@ import { useStyleMode, useTheme, useWeekMarkMode } from "./useTheme";
 import WeekMarks from "./WeekMarks";
 import { buildCloseDays, isWorkingDay } from "./calendarRules";
 import { dateKey, getAuditGuard, pad, startOfWorkWeek } from "./auditRotation";
+import { clampMonth, fromMonthNumber, monthNumber } from "./calendarYears";
 
-const YEAR = 2026;
 const TIMEZONE_ID = "America/Mexico_City";
 
 const MONTHS = [
@@ -62,8 +63,8 @@ function getAuditGuardForWeek(week, guards, auditAssignments, auditRotations) {
   return getAuditGuard(week[0], guards, auditAssignments, auditRotations);
 }
 
-function getMonthWeeks(monthIndex) {
-  const first = new Date(YEAR, monthIndex, 1);
+function getMonthWeeks(year, monthIndex) {
+  const first = new Date(year, monthIndex, 1);
   const start = startOfWorkWeek(first);
   const weeks = [];
 
@@ -100,13 +101,13 @@ function formatShiftTime(time) {
   return time.replace(/^0/, "");
 }
 
-function buildSchedule(guards, assignments, shifts, holidays, vacations) {
+function buildSchedule(year, guards, assignments, shifts, holidays, vacations) {
   const schedule = {};
 
   for (let month = 0; month < 12; month += 1) {
-    const daysInMonth = new Date(YEAR, month + 1, 0).getDate();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
     for (let day = 1; day <= daysInMonth; day += 1) {
-      const date = new Date(YEAR, month, day);
+      const date = new Date(year, month, day);
       const key = dateKey(date);
       const isWeekend = date.getDay() === 0 || date.getDay() === 6;
       const isHoliday = key in holidays;
@@ -195,14 +196,14 @@ function formatIcsDate(date) {
 }
 
 // Semanas (lunes) del anio con la persona de auditorias que les toca.
-function buildAuditWeeks(guards, auditAssignments, auditRotations) {
+function buildAuditWeeks(year, guards, auditAssignments, auditRotations) {
   const weeks = [];
-  const monday = startOfWorkWeek(new Date(YEAR, 0, 1));
-  if (monday.getFullYear() < YEAR) {
+  const monday = startOfWorkWeek(new Date(year, 0, 1));
+  if (monday.getFullYear() < year) {
     monday.setDate(monday.getDate() + 7);
   }
 
-  while (monday.getFullYear() === YEAR) {
+  while (monday.getFullYear() === year) {
     const guard = getAuditGuard(monday, guards, auditAssignments, auditRotations);
     if (guard) {
       weeks.push({ monday: new Date(monday), guard });
@@ -248,12 +249,12 @@ function makeAuditEvents(auditWeeks, monthIndex, selectedGuardId, exportId, stam
 }
 
 // Un evento de 8:00 a 19:00 por cada dia de vacaciones del mes.
-function makeVacationEvents(vacations, guard, monthIndex, exportId, stamp) {
-  const daysInMonth = new Date(YEAR, monthIndex + 1, 0).getDate();
+function makeVacationEvents(vacations, guard, year, monthIndex, exportId, stamp) {
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
   const events = [];
 
   for (let day = 1; day <= daysInMonth; day += 1) {
-    const date = new Date(YEAR, monthIndex, day);
+    const date = new Date(year, monthIndex, day);
     if (!vacations[assignmentKey(dateKey(date), guard.id)]) {
       continue;
     }
@@ -284,13 +285,13 @@ function makeVacationEvents(vacations, guard, monthIndex, exportId, stamp) {
 
 // Un evento "Comida" (Ausente) por cada dia habil del mes sin vacaciones que tenga hora de comida.
 // El horario de un dia en especifico ("YYYY-MM-DD") reemplaza al del mes ("YYYY-MM").
-function makeLunchEvents(lunches, holidays, vacations, guard, monthIndex, exportId, stamp) {
-  const daysInMonth = new Date(YEAR, monthIndex + 1, 0).getDate();
-  const monthLunch = lunches[assignmentKey(`${YEAR}-${pad(monthIndex + 1)}`, guard.id)];
+function makeLunchEvents(lunches, holidays, vacations, guard, year, monthIndex, exportId, stamp) {
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  const monthLunch = lunches[assignmentKey(`${year}-${pad(monthIndex + 1)}`, guard.id)];
   const events = [];
 
   for (let day = 1; day <= daysInMonth; day += 1) {
-    const date = new Date(YEAR, monthIndex, day);
+    const date = new Date(year, monthIndex, day);
     const key = dateKey(date);
     const lunch = lunches[assignmentKey(key, guard.id)] ?? monthLunch;
     if (!lunch || !isWorkingDay(date, holidays) || vacations[assignmentKey(key, guard.id)]) {
@@ -352,18 +353,19 @@ function makeTimezoneBlock() {
 }
 
 function makeIcs(
+  year,
   monthIndex,
   schedule,
   selectedGuardId = "all",
   exportId = crypto.randomUUID(),
-  calendarName = `Guardias ${MONTHS[monthIndex]} ${YEAR}`
+  calendarName = `Guardias ${MONTHS[monthIndex]} ${year}`
 ) {
   const events = [];
-  const daysInMonth = new Date(YEAR, monthIndex + 1, 0).getDate();
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
 
   for (let day = 1; day <= daysInMonth; day += 1) {
-    const date = new Date(YEAR, monthIndex, day);
+    const date = new Date(year, monthIndex, day);
     const shifts = (schedule[dateKey(date)] ?? []).filter(
       (shift) => selectedGuardId === "all" || shift.guard.id === selectedGuardId
     );
@@ -385,7 +387,7 @@ function makeIcs(
 
       blocks.forEach((block) => {
         const description = `Fuera de oficina. Horario laboral ${shift.start} - ${shift.end}.`;
-        const uid = `${exportId}-${YEAR}-${pad(monthIndex + 1)}-${pad(day)}-${shift.id}-${shift.guard.id}-${block.id}@guardias-2026`;
+        const uid = `${exportId}-${year}-${pad(monthIndex + 1)}-${pad(day)}-${shift.id}-${shift.guard.id}-${block.id}@guardias-2026`;
 
         events.push(
           [
@@ -427,11 +429,32 @@ function downloadTextFile(filename, content) {
 
 function App() {
   const [session, setSession] = useState(undefined);
-  // Abre en el mes actual (si estamos fuera de 2026, en enero).
-  const [monthIndex, setMonthIndex] = useState(() => {
-    const today = new Date();
-    return today.getFullYear() === YEAR ? today.getMonth() : 0;
-  });
+  // Mes que se ve: abre en el mes actual (limitado a los anios del calendario, ver calendarYears.js).
+  const [view, setView] = useState(() => clampMonth(new Date().getFullYear(), new Date().getMonth()));
+  const { year, monthIndex } = view;
+
+  function showMonth(nextYear, nextMonthIndex) {
+    setView(clampMonth(nextYear, nextMonthIndex));
+  }
+
+  // Avanza o retrocede meses, cambiando de anio si hace falta.
+  function moveMonth(delta) {
+    setView((current) => {
+      const next = fromMonthNumber(monthNumber(current.year, current.monthIndex) + delta);
+      return clampMonth(next.year, next.monthIndex);
+    });
+  }
+
+  // Hoy: el boton de arriba regresa al mes actual.
+  const today = new Date();
+  const todayMonth = clampMonth(today.getFullYear(), today.getMonth());
+  // "Martes 17 de noviembre de 2026"
+  const todayWeekday = new Intl.DateTimeFormat("es-MX", { weekday: "long" }).format(today);
+  const todayMonthName = new Intl.DateTimeFormat("es-MX", { month: "long" }).format(today);
+  const todayLabel = `${todayWeekday.charAt(0).toUpperCase()}${todayWeekday.slice(1)} ${today.getDate()} de ${todayMonthName} de ${today.getFullYear()}`;
+
+  // Tira de meses: las 12 rayitas del anio que se ve (cada mes siempre en su lugar).
+  const monthStrip = Array.from({ length: 12 }, (_, index) => ({ year, monthIndex: index }));
   const {
     guards,
     assignments,
@@ -475,14 +498,14 @@ function App() {
   const { weekMarkMode, setWeekMarkMode } = useWeekMarkMode();
   const { kinds: icsKinds, toggleKind: toggleIcsKind } = useIcsKinds();
   const schedule = useMemo(
-    () => buildSchedule(guards, assignments, shifts, holidays, vacations),
-    [guards, assignments, shifts, holidays, vacations]
+    () => buildSchedule(year, guards, assignments, shifts, holidays, vacations),
+    [year, guards, assignments, shifts, holidays, vacations]
   );
-  const closeDays = useMemo(() => buildCloseDays(YEAR, holidays, msCloseDay), [holidays, msCloseDay]);
-  const monthWeeks = useMemo(() => getMonthWeeks(monthIndex), [monthIndex]);
+  const closeDays = useMemo(() => buildCloseDays(year, holidays, msCloseDay), [year, holidays, msCloseDay]);
+  const monthWeeks = useMemo(() => getMonthWeeks(year, monthIndex), [year, monthIndex]);
   const auditWeeks = useMemo(
-    () => buildAuditWeeks(guards, auditAssignments, auditRotations),
-    [guards, auditAssignments, auditRotations]
+    () => buildAuditWeeks(year, guards, auditAssignments, auditRotations),
+    [year, guards, auditAssignments, auditRotations]
   );
 
   // Sesion: undefined mientras se revisa, null sin sesion, { user } con sesion.
@@ -522,9 +545,9 @@ function App() {
       return;
     }
     const guardName = currentGuard.name;
-    const monthLabel = `${MONTHS[monthIndex]} ${YEAR}`;
+    const monthLabel = `${MONTHS[monthIndex]} ${year}`;
     const guardSlug = guardName.toLowerCase().replace(/\s+/g, "-");
-    const fileSuffix = `${guardSlug}-${YEAR}-${pad(monthIndex + 1)}-${MONTHS[monthIndex].toLowerCase()}.ics`;
+    const fileSuffix = `${guardSlug}-${year}-${pad(monthIndex + 1)}-${MONTHS[monthIndex].toLowerCase()}.ics`;
     const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
     const files = [];
 
@@ -532,17 +555,17 @@ function App() {
       const calendarName = `Guardias ${guardName} - ${monthLabel}`;
       files.push([
         `guardias-${fileSuffix}`,
-        makeIcs(monthIndex, schedule, currentGuard.id, crypto.randomUUID(), calendarName),
+        makeIcs(year, monthIndex, schedule, currentGuard.id, crypto.randomUUID(), calendarName),
       ]);
     }
     if (icsKinds.includes("vacations")) {
-      const events = makeVacationEvents(vacations, currentGuard, monthIndex, crypto.randomUUID(), stamp);
+      const events = makeVacationEvents(vacations, currentGuard, year, monthIndex, crypto.randomUUID(), stamp);
       if (events.length > 0) {
         files.push([`vacaciones-${fileSuffix}`, makeIcsCalendar(`Vacaciones ${guardName} - ${monthLabel}`, events)]);
       }
     }
     if (icsKinds.includes("lunches")) {
-      const events = makeLunchEvents(lunches, holidays, vacations, currentGuard, monthIndex, crypto.randomUUID(), stamp);
+      const events = makeLunchEvents(lunches, holidays, vacations, currentGuard, year, monthIndex, crypto.randomUUID(), stamp);
       if (events.length > 0) {
         files.push([`comida-${fileSuffix}`, makeIcsCalendar(`Comida ${guardName} - ${monthLabel}`, events)]);
       }
@@ -610,9 +633,9 @@ function App() {
     try {
       const result = await apiRequest("/api/enviar-mes", {
         method: "POST",
-        body: { month: monthIndex, image, logo },
+        body: { year, month: monthIndex, image, logo },
       });
-      message = `Correo de ${MONTHS[monthIndex]} enviado a ${[...result.para, ...result.cc].join(", ")}.`;
+      message = `Correo de ${MONTHS[monthIndex]} ${year} enviado a ${[...result.para, ...result.cc].join(", ")}.`;
     } catch (sendError) {
       message = sendError.message || "No se pudo enviar el correo. Revisa tu conexion.";
     }
@@ -648,7 +671,7 @@ function App() {
           <div className="brand compact">
             <BrandMark />
             <div>
-              <h1>Guardias 2026</h1>
+              <h1>Calendario Guardias</h1>
               <p>{currentGuard ? currentGuard.name : "Siclik CESA"}</p>
             </div>
             <SidebarMenu
@@ -659,23 +682,38 @@ function App() {
 
           {/* Mes: flechas y una tira con los 12 meses (cada rayita lleva a su mes). */}
           <div className="month-picker">
+            <button
+              type="button"
+              className={[
+                "today-button",
+                todayMonth.year === year && todayMonth.monthIndex === monthIndex ? "current" : "",
+              ].join(" ")}
+              onClick={() => showMonth(todayMonth.year, todayMonth.monthIndex)}
+              title="Ir al mes actual"
+            >
+              <CalendarCheck size={16} aria-hidden="true" />
+              <span className="today-text">
+                <small>Hoy</small>
+                <strong>{todayLabel}</strong>
+              </span>
+            </button>
             <div className="panel month-stepper">
               <button
                 type="button"
                 className="icon-button"
-                onClick={() => setMonthIndex((monthIndex + 11) % 12)}
+                onClick={() => moveMonth(-1)}
                 aria-label="Mes anterior"
                 title="Mes anterior"
               >
                 <ChevronLeft size={18} />
               </button>
               <strong>
-                {MONTHS[monthIndex]} {YEAR}
+                {MONTHS[monthIndex]} {year}
               </strong>
               <button
                 type="button"
                 className="icon-button"
-                onClick={() => setMonthIndex((monthIndex + 1) % 12)}
+                onClick={() => moveMonth(1)}
                 aria-label="Mes siguiente"
                 title="Mes siguiente"
               >
@@ -683,17 +721,22 @@ function App() {
               </button>
             </div>
             <div className="month-strip">
-              {MONTHS.map((month, index) => (
-                <button
-                  key={month}
-                  type="button"
-                  className={index === monthIndex ? "active" : ""}
-                  onClick={() => setMonthIndex(index)}
-                  aria-label={month}
-                  aria-current={index === monthIndex ? "true" : undefined}
-                  title={month}
-                />
-              ))}
+              {monthStrip.map((item) => {
+                const label = `${MONTHS[item.monthIndex]} ${item.year}`;
+                const active = item.monthIndex === monthIndex;
+                const isToday = item.year === todayMonth.year && item.monthIndex === todayMonth.monthIndex;
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    className={[active ? "active" : "", isToday ? "today" : ""].join(" ")}
+                    onClick={() => showMonth(item.year, item.monthIndex)}
+                    aria-label={label}
+                    aria-current={active ? "true" : undefined}
+                    title={label}
+                  />
+                );
+              })}
             </div>
           </div>
 
@@ -715,6 +758,7 @@ function App() {
                 guard={currentGuard}
                 lunches={lunches}
                 holidays={holidays}
+                year={year}
                 monthIndex={monthIndex}
                 onSet={setLunch}
                 onRemove={removeLunch}
@@ -724,7 +768,7 @@ function App() {
                 kinds={icsKinds}
                 onToggle={toggleIcsKind}
                 onDownload={downloadMonth}
-                monthName={MONTHS[monthIndex].toLowerCase()}
+                monthName={`${MONTHS[monthIndex].toLowerCase()} ${year}`}
               />
             </div>
           ) : null}
@@ -779,7 +823,7 @@ function App() {
           <div className="calendar-card">
             <header className="topbar calendar-head">
               <h2>
-                {MONTHS[monthIndex]} {YEAR}
+                {MONTHS[monthIndex]} {year}
               </h2>
               <div className="toolbar">
                 <button
@@ -825,7 +869,7 @@ function App() {
                   <tr className="month-row">
                     <th>Entrada</th>
                     <th colSpan="6">
-                      {MONTHS[monthIndex]} {YEAR}
+                      {MONTHS[monthIndex]} {year}
                     </th>
                   </tr>
                   <tr>
@@ -901,6 +945,13 @@ function App() {
                                     const span = selectedShift ? shifts.length - selectedShift.position : shifts.length;
                                     const rowStart = selectedShift ? selectedShift.position + 1 : 1;
 
+                                    // Solo la persona que inicio sesion puede cambiar sus propios turnos
+                                    // (la API tambien lo valida).
+                                    const isMine = guard.id === currentGuard?.id;
+                                    const shiftText = selectedShift
+                                      ? `${guard.name}: ${selectedShift.start} - ${selectedShift.end}.`
+                                      : `${guard.name}: Sin turno.`;
+
                                     return (
                                       <button
                                         type="button"
@@ -908,17 +959,19 @@ function App() {
                                         className={[
                                           "assignment-column",
                                           !selectedShift ? "off-duty" : "",
+                                          isMine ? "" : "locked",
                                         ].join(" ")}
-                                        onClick={() => cycleAssignment(key, guard.id, currentAssignment)}
+                                        onClick={isMine ? () => cycleAssignment(key, guard.id, currentAssignment) : undefined}
+                                        aria-disabled={isMine ? undefined : "true"}
                                         style={{
                                           backgroundColor: selectedShift ? guard.color : undefined,
                                           gridColumn: guardIndex + 1,
                                           gridRow: `${rowStart} / span ${span}`,
                                         }}
                                         title={
-                                          selectedShift
-                                            ? `${guard.name}: ${selectedShift.start} - ${selectedShift.end}. Click para cambiar.`
-                                            : `${guard.name}: Sin guardia. Click para cambiar.`
+                                          isMine
+                                            ? `${shiftText} Click para cambiar tu turno.`
+                                            : `${shiftText} Solo ${guard.name} puede cambiar sus turnos.`
                                         }
                                       >
                                         {guard.initials}
@@ -990,4 +1043,9 @@ function App() {
   );
 }
 
-createRoot(document.getElementById("root")).render(<App />);
+createRoot(document.getElementById("root")).render(
+  <>
+    <App />
+    <AppTooltip />
+  </>
+);

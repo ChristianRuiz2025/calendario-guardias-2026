@@ -4,7 +4,7 @@ import CollapsiblePanel from "./CollapsiblePanel";
 import { pad, parseDateKey } from "./auditRotation";
 import { isWorkingDay } from "./calendarRules";
 
-const YEAR = 2026;
+import { MAX_DATE, MIN_DATE } from "./calendarYears";
 
 const MONTH_NAMES = [
   "Enero",
@@ -24,15 +24,17 @@ const MONTH_NAMES = [
 const DEFAULT_START = "14:00";
 const DEFAULT_END = "15:00";
 
-// "2026-11" -> "Noviembre (todo el mes)"; "2026-11-12" -> "12 de noviembre"
+// "2026-11" -> "Noviembre 2026 (todo el mes)"; "2026-11-12" -> "12 de noviembre de 2026"
 function periodLabel(periodKey) {
-  const [, month, day] = periodKey.split("-").map(Number);
-  return day ? `${day} de ${MONTH_NAMES[month - 1].toLowerCase()}` : `${MONTH_NAMES[month - 1]} (todo el mes)`;
+  const [year, month, day] = periodKey.split("-").map(Number);
+  return day
+    ? `${day} de ${MONTH_NAMES[month - 1].toLowerCase()} de ${year}`
+    : `${MONTH_NAMES[month - 1]} ${year} (todo el mes)`;
 }
 
 // Horas de comida de la persona que inicio sesion: por mes o por dia (el dia manda sobre el mes).
 // No se ven en el calendario; solo van en el ICS "Comida".
-export default function LunchPanel({ guard, lunches, holidays, monthIndex, onSet, onRemove }) {
+export default function LunchPanel({ guard, lunches, holidays, year, monthIndex, onSet, onRemove }) {
   const [mode, setMode] = useState("month");
   const [month, setMonth] = useState(String(monthIndex));
   const [day, setDay] = useState("");
@@ -46,7 +48,7 @@ export default function LunchPanel({ guard, lunches, holidays, monthIndex, onSet
   }, [monthIndex]);
 
   // Resumen con el panel cerrado: el horario del mes que se ve.
-  const shownMonthLunch = lunches[`${YEAR}-${pad(monthIndex + 1)}|${guard.id}`];
+  const shownMonthLunch = lunches[`${year}-${pad(monthIndex + 1)}|${guard.id}`];
   const summary = shownMonthLunch
     ? `${MONTH_NAMES[monthIndex].slice(0, 3)} ${shownMonthLunch.start} a ${shownMonthLunch.end}`
     : "Sin horario";
@@ -65,7 +67,7 @@ export default function LunchPanel({ guard, lunches, holidays, monthIndex, onSet
     }
     let periodKey;
     if (mode === "month") {
-      periodKey = `${YEAR}-${pad(Number(month) + 1)}`;
+      periodKey = `${year}-${pad(Number(month) + 1)}`;
     } else {
       if (!day) {
         setFormError("Elige el dia.");
@@ -112,7 +114,7 @@ export default function LunchPanel({ guard, lunches, holidays, monthIndex, onSet
       <form className="vacation-form" onSubmit={submit}>
         {mode === "month" ? (
           <label className="lunch-period">
-            Mes
+            Mes ({year})
             <select value={month} onChange={(event) => setMonth(event.target.value)}>
               {MONTH_NAMES.map((name, index) => (
                 <option key={name} value={index}>
@@ -126,8 +128,8 @@ export default function LunchPanel({ guard, lunches, holidays, monthIndex, onSet
             Dia
             <input
               type="date"
-              min={`${YEAR}-01-01`}
-              max={`${YEAR}-12-31`}
+              min={MIN_DATE}
+              max={MAX_DATE}
               value={day}
               onChange={(event) => {
                 setDay(event.target.value);

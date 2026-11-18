@@ -2493,3 +2493,138 @@ button.rotation-chip:hover {
 .week-mark-sample.stripe {
   border-left: 5px solid #f38ba8;
 }
+
+/* Turnos y auditorias: resaltado negro al pasar el raton (y con teclado), en lugar del contorno
+   de color que se quedaba al dar clic. */
+.guard-calendar .assignment-column:focus,
+.guard-calendar .audit-select:focus {
+  box-shadow: none;
+}
+
+.guard-calendar .assignment-column:hover,
+.guard-calendar .assignment-column:focus-visible,
+.guard-calendar .audit-select:hover,
+.guard-calendar .audit-select:focus-visible {
+  box-shadow: inset 0 0 0 2px #000000;
+}
+
+/* En tema oscuro el resaltado va en blanco. */
+:root[data-theme="dark"] .guard-calendar .assignment-column:hover,
+:root[data-theme="dark"] .guard-calendar .assignment-column:focus-visible,
+:root[data-theme="dark"] .guard-calendar .audit-select:hover,
+:root[data-theme="dark"] .guard-calendar .audit-select:focus-visible {
+  box-shadow: inset 0 0 0 2px #ffffff;
+}
+
+/* Tema oscuro: iniciales de los turnos, nombres de auditorias y feriados en blanco. */
+:root[data-theme="dark"] .guard-calendar .assignment-column:not(.off-duty),
+:root[data-theme="dark"] .guard-calendar .vacation-initial,
+:root[data-theme="dark"] .guard-calendar .audit-select:not(.unassigned),
+:root[data-theme="dark"] .guard-calendar .no-class {
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+/* La lista que se abre al elegir auditorias conserva los colores del tema. */
+:root[data-theme="dark"] .guard-calendar .audit-select option {
+  text-shadow: none;
+}
+
+/* Boton "Hoy" arriba del mes: muestra la fecha de hoy en el color del usuario (--accent) y
+   regresa al mes actual. */
+.today-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  text-align: left;
+}
+
+.today-button svg {
+  flex: none;
+}
+
+/* "HOY" pequeno arriba y la fecha completa en una linea. */
+.today-text {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.today-text small {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.today-text strong {
+  overflow: hidden;
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.today-button:hover {
+  filter: brightness(1.06);
+}
+
+/* Fuera del mes actual se marca con un contorno para invitar a regresar. */
+.today-button:not(.current) {
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+
+/* Rayita del mes actual (cuando no es el que se ve): un punto debajo. */
+.month-strip button.today:not(.active)::before {
+  background: var(--muted);
+}
+
+/* Turnos de otras personas: se ven igual pero no se pueden cambiar ni se resaltan. */
+.guard-calendar .assignment-column.locked {
+  cursor: default;
+}
+
+.guard-calendar .assignment-column.locked:hover,
+:root[data-theme="dark"] .guard-calendar .assignment-column.locked:hover {
+  box-shadow: none;
+}
+
+/* Etiquetas al pasar el raton (src/AppTooltip.jsx). */
+.app-tooltip {
+  position: fixed;
+  z-index: 100;
+  max-width: 280px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(10, 30, 46, 0.18);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.35;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.app-tooltip.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* En estilo Cristal, con mas cuerpo para leerse sobre el contenido. */
+:root[data-style="cristal"] .app-tooltip {
+  border-color: var(--glass-edge);
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
