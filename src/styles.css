@@ -2508,10 +2508,11 @@ button.rotation-chip:hover {
   box-shadow: inset 0 0 0 2px #000000;
 }
 
-/* Tema oscuro: iniciales de los turnos y nombres de auditorias en blanco. */
+/* Tema oscuro: iniciales de los turnos, nombres de auditorias y feriados en blanco. */
 :root[data-theme="dark"] .guard-calendar .assignment-column:not(.off-duty),
 :root[data-theme="dark"] .guard-calendar .vacation-initial,
-:root[data-theme="dark"] .guard-calendar .audit-select:not(.unassigned) {
+:root[data-theme="dark"] .guard-calendar .audit-select:not(.unassigned),
+:root[data-theme="dark"] .guard-calendar .no-class {
   color: #ffffff;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
