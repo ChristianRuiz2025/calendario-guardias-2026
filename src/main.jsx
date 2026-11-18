@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Building2, CalendarCheck, ChevronLeft, ChevronRight, Download, Mail } from "lucide-react";
+import { CalendarCheck, ChevronLeft, ChevronRight, Download, Mail } from "lucide-react";
 import "./styles.css";
 // Diseno refinado del calendario. Para regresar al anterior, quita esta linea.
 import "./calendarRefined.css";
@@ -22,7 +22,7 @@ import WeekMarks from "./WeekMarks";
 import { buildCloseDays, isWorkingDay } from "./calendarRules";
 import { dateKey, getAuditGuard, pad, startOfWorkWeek } from "./auditRotation";
 import { clampMonth, fromMonthNumber, monthNumber } from "./calendarYears";
-import { buildOfficeSchedule } from "./officeRotation";
+import { NO_SHIFT, buildOfficeDefaults } from "./officeRotation";
 
 const TIMEZONE_ID = "America/Mexico_City";
 
@@ -500,17 +500,19 @@ function App() {
   const { styleMode, setStyleMode } = useStyleMode();
   const { weekMarkMode, setWeekMarkMode } = useWeekMarkMode();
   const { kinds: icsKinds, toggleKind: toggleIcsKind } = useIcsKinds();
+  // Turnos por defecto de los dias de oficina (rotacion de oficina); lo guardado en el calendario
+  // manda sobre ellos.
+  const officeDefaults = useMemo(
+    () => buildOfficeDefaults(officeRotation, officeDays, holidays, guards, shifts, `${year}-01-01`, `${year}-12-31`),
+    [officeRotation, officeDays, holidays, guards, shifts, year]
+  );
+  const effectiveAssignments = useMemo(() => ({ ...officeDefaults, ...assignments }), [officeDefaults, assignments]);
   const schedule = useMemo(
-    () => buildSchedule(year, guards, assignments, shifts, holidays, vacations),
-    [year, guards, assignments, shifts, holidays, vacations]
+    () => buildSchedule(year, guards, effectiveAssignments, shifts, holidays, vacations),
+    [year, guards, effectiveAssignments, shifts, holidays, vacations]
   );
   const closeDays = useMemo(() => buildCloseDays(year, holidays, msCloseDay), [year, holidays, msCloseDay]);
   const monthWeeks = useMemo(() => getMonthWeeks(year, monthIndex), [year, monthIndex]);
-  // Quien va a la oficina cada dia de oficina, hasta el ultimo dia que se ve.
-  const officeSchedule = useMemo(() => {
-    const lastDay = monthWeeks.at(-1)?.at(-1);
-    return lastDay ? buildOfficeSchedule(officeRotation, officeDays, holidays, guards, dateKey(lastDay)) : {};
-  }, [officeRotation, officeDays, holidays, guards, monthWeeks]);
   const auditWeeks = useMemo(
     () => buildAuditWeeks(year, guards, auditAssignments, auditRotations),
     [year, guards, auditAssignments, auditRotations]
@@ -532,8 +534,14 @@ function App() {
       .finally(() => setSession(null));
   }
 
+  // Siguiente turno al dar clic. En un dia con turno por defecto, "sin turno" se guarda como
+  // NO_SHIFT (si se borrara, regresaria el turno por defecto).
   function cycleAssignment(dayKey, guardId, currentShiftId) {
-    updateAssignment(dayKey, guardId, nextShiftId(currentShiftId, shifts));
+    let next = currentShiftId === NO_SHIFT ? shifts[0].id : nextShiftId(currentShiftId, shifts);
+    if (!next && assignmentKey(dayKey, guardId) in officeDefaults) {
+      next = NO_SHIFT;
+    }
+    updateAssignment(dayKey, guardId, next);
   }
 
   // La persona que inicio sesion, ligada por el correo que tiene en Configuracion > Guardias.
@@ -903,16 +911,6 @@ function App() {
                             ].join(" ")}
                           >
                             <span>{date.getDate()}</span>
-                            {date.getMonth() === monthIndex && officeSchedule[dateKey(date)] ? (
-                              <span
-                                className="office-chip"
-                                style={{ "--chip-color": officeSchedule[dateKey(date)].color }}
-                                title={`Va a la oficina: ${officeSchedule[dateKey(date)].name}`}
-                              >
-                                <Building2 size={11} aria-hidden="true" />
-                                {officeSchedule[dateKey(date)].initials}
-                              </span>
-                            ) : null}
                           </td>
                         ))}
                         <td className="audit-date-cell"></td>
@@ -960,7 +958,7 @@ function App() {
 
                                     const entry = entries.find((item) => item.guard.id === guard.id);
                                     const currentAssignment =
-                                      assignments[assignmentKey(key, guard.id)] ?? entry?.id ?? "";
+                                      effectiveAssignments[assignmentKey(key, guard.id)] ?? entry?.id ?? "";
                                     const selectedShift = shifts.find((item) => item.id === currentAssignment);
                                     const span = selectedShift ? shifts.length - selectedShift.position : shifts.length;
                                     const rowStart = selectedShift ? selectedShift.position + 1 : 1;

@@ -28,6 +28,7 @@ import {
 import { normalizeMailSettings, renderSubject, resolveRecipients } from "../src/mailSettings.js";
 import { MONTH_NAMES, buildLegendHtml, buildMonthEmail, buildMonthWeeks } from "../src/monthEmail.js";
 import { isValidYear } from "../src/calendarYears.js";
+import { buildOfficeDefaults, normalizeOfficeRotation } from "../src/officeRotation.js";
 
 const IMAGE_CID = "calendario@guardias-cesa";
 const LOGO_CID = "logo@guardias-cesa";
@@ -226,9 +227,19 @@ export default async function handler(req, res) {
     shifts,
     officeDays: Array.isArray(officeDays) ? officeDays : DEFAULT_OFFICE_DAYS,
     msCloseDay: Number.isInteger(msCloseDay) ? msCloseDay : DEFAULT_MS_CLOSE_DAY,
-    assignments: Object.fromEntries(
-      calendar.assignments.map((row) => [`${row.day_key}|${row.guard_id}`, row.shift_id])
-    ),
+    // Los turnos por defecto de la rotacion de oficina, y encima lo guardado (igual que en la app).
+    assignments: {
+      ...buildOfficeDefaults(
+        normalizeOfficeRotation(setting("office_rotation")),
+        Array.isArray(officeDays) ? officeDays : DEFAULT_OFFICE_DAYS,
+        Object.fromEntries(calendar.holidays.map((row) => [row.day_key, row.name ?? ""])),
+        guards,
+        shifts,
+        `${year}-01-01`,
+        `${year}-12-31`
+      ),
+      ...Object.fromEntries(calendar.assignments.map((row) => [`${row.day_key}|${row.guard_id}`, row.shift_id])),
+    },
     holidays: Object.fromEntries(calendar.holidays.map((row) => [row.day_key, row.name ?? ""])),
     vacations: Object.fromEntries(calendar.vacations.map((row) => [`${row.day_key}|${row.guard_id}`, true])),
     auditAssignments: Object.fromEntries(calendar.auditAssignments.map((row) => [row.week_key, row.guard_id])),

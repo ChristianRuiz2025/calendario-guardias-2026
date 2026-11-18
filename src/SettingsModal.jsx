@@ -445,6 +445,7 @@ export default function SettingsModal({
             >
               <OfficeRotationEditor
                 guards={guards}
+                shifts={shifts}
                 officeDays={officeDays}
                 holidays={holidays}
                 rotation={officeRotation}

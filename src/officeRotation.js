@@ -1,6 +1,8 @@
-// Rotacion de oficina: cada dia de oficina va una persona, en el orden dado, empezando en `start`.
-// Solo cuentan los dias de oficina habiles (si cae feriado, a esa persona le toca el siguiente dia
-// de oficina). Se guarda en app_settings con la llave "office_rotation".
+// Rotacion de oficina: cada dia de oficina le toca a una persona, en el orden dado, empezando en
+// `start`, y entra con el turno mas tarde; los demas, con el mas temprano. Es solo el turno por
+// defecto: lo que cada quien guarda en el calendario manda. Solo cuentan los dias de oficina
+// habiles (si cae feriado, a esa persona le toca el siguiente). Se guarda en app_settings con la
+// llave "office_rotation". La usan la app (src/main.jsx) y el correo del mes (api/enviar-mes.js).
 
 import { dateKey, findRotationGuard, parseDateKey } from "./auditRotation.js";
 import { isWorkingDay } from "./calendarRules.js";
@@ -44,4 +46,29 @@ export function buildOfficeSchedule(rotation, officeDays, holidays, guards, unti
     }
   }
   return schedule;
+}
+
+// Turno guardado a proposito como "sin turno" en un dia que tiene turno por defecto.
+export const NO_SHIFT = "none";
+
+// { "YYYY-MM-DD|guardId": shiftId } con el turno por defecto de cada persona en los dias de oficina
+// entre fromKey y untilKey: el mas tarde para quien le toca y el mas temprano para los demas.
+export function buildOfficeDefaults(rotation, officeDays, holidays, guards, shifts, fromKey, untilKey) {
+  const defaults = {};
+  if (shifts.length === 0) {
+    return defaults;
+  }
+  const byStart = [...shifts].sort((a, b) => a.start.localeCompare(b.start) || a.end.localeCompare(b.end));
+  const earliest = byStart[0].id;
+  const latest = byStart.at(-1).id;
+  const schedule = buildOfficeSchedule(rotation, officeDays, holidays, guards, untilKey);
+  Object.entries(schedule).forEach(([day, inOffice]) => {
+    if (day < fromKey) {
+      return;
+    }
+    guards.forEach((guard) => {
+      defaults[`${day}|${guard.id}`] = guard.id === inOffice.id ? latest : earliest;
+    });
+  });
+  return defaults;
 }

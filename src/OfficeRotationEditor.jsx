@@ -15,7 +15,7 @@ function shortDate(key) {
 
 // Configuracion > Rotacion de oficina: orden de las personas y desde cuando empieza.
 // Muestra los proximos dias de oficina para revisar el resultado antes de guardar.
-export default function OfficeRotationEditor({ guards, officeDays, holidays, rotation, onSave }) {
+export default function OfficeRotationEditor({ guards, shifts, officeDays, holidays, rotation, onSave }) {
   const [start, setStart] = useState(rotation.start);
   const [order, setOrder] = useState(() => resolveOfficeOrder(rotation.order, guards).map((guard) => guard.id));
   const [saved, setSaved] = useState(false);
@@ -28,6 +28,11 @@ export default function OfficeRotationEditor({ guards, officeDays, holidays, rot
     setOrder(resolveOfficeOrder(rotation.order, guards).map((guard) => guard.id));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rotation.start, savedOrderKey]);
+
+  // "10:00 a 19:00" del turno mas tarde y del mas temprano.
+  const byStart = [...shifts].sort((a, b) => a.start.localeCompare(b.start));
+  const earliestLabel = byStart.length ? `${byStart[0].start} a ${byStart[0].end}` : "";
+  const latestLabel = byStart.length ? `${byStart.at(-1).start} a ${byStart.at(-1).end}` : "";
 
   const included = order.map((id) => guards.find((guard) => guard.id === id)).filter(Boolean);
   const excluded = guards.filter((guard) => !order.includes(guard.id));
@@ -60,8 +65,9 @@ export default function OfficeRotationEditor({ guards, officeDays, holidays, rot
   return (
     <div className="office-rotation">
       <p className="settings-hint">
-        Cada dia de oficina va una persona, en este orden, empezando el dia indicado. Si un dia de oficina cae en
-        feriado, a esa persona le toca el siguiente.
+        Cada dia de oficina, a quien le toca se le pone el turno mas tarde ({latestLabel}) y a los demas el mas
+        temprano ({earliestLabel}). Es solo el turno por defecto: cada quien puede cambiar el suyo en el calendario. Si
+        un dia de oficina cae en feriado, a esa persona le toca el siguiente.
       </p>
 
       <label className="office-rotation-start">
@@ -139,7 +145,7 @@ export default function OfficeRotationEditor({ guards, officeDays, holidays, rot
 
       {preview.length > 0 ? (
         <div className="office-rotation-preview">
-          <p className="settings-subtitle">Proximos dias de oficina</p>
+          <p className="settings-subtitle">Proximos dias de oficina (entra a las {byStart.at(-1)?.start ?? ""})</p>
           <ul>
             {preview.map(([key, guard]) => (
               <li key={key}>

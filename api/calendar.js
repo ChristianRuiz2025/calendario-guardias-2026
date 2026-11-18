@@ -7,6 +7,7 @@ import { requireUser } from "./_lib/auth.js";
 import { getPool, loadCalendar } from "./_lib/db.js";
 import { DEFAULT_SHIFTS } from "../src/calendarDefaults.js";
 import { isValidEmail, normalizeMailSettings } from "../src/mailSettings.js";
+import { NO_SHIFT } from "../src/officeRotation.js";
 
 const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
 const TIME = /^\d{2}:\d{2}$/;
@@ -204,7 +205,8 @@ const OPERATIONS = {
       await db.query(
         "INSERT INTO shift_assignments (day_key, guard_id, shift_id) VALUES (?, ?, ?) " +
           "ON DUPLICATE KEY UPDATE shift_id = VALUES(shift_id)",
-        [...params, await existingShift(db, shiftId)]
+        // NO_SHIFT: "sin turno" a proposito en un dia con turno por defecto (rotacion de oficina).
+        [...params, shiftId === NO_SHIFT ? NO_SHIFT : await existingShift(db, shiftId)]
       );
     } else {
       await db.query("DELETE FROM shift_assignments WHERE day_key = ? AND guard_id = ?", params);
