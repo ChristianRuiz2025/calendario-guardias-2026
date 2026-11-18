@@ -2530,20 +2530,21 @@ button.rotation-chip:hover {
   text-shadow: none;
 }
 
-/* Boton "Hoy" arriba del mes: muestra la fecha de hoy y regresa al mes actual. */
+/* Boton "Hoy" arriba del mes: muestra la fecha de hoy en el color del usuario (--accent) y
+   regresa al mes actual. */
 .today-button {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
-  min-height: 34px;
-  border: 1px dashed var(--border);
+  min-height: 36px;
+  border: 1px solid var(--accent);
   border-radius: 8px;
   padding: 0 12px;
-  background: transparent;
-  color: var(--muted-strong);
+  background: var(--accent);
+  color: var(--accent-contrast);
   font-size: 0.84rem;
-  font-weight: 600;
+  font-weight: 700;
   text-align: left;
 }
 
@@ -2552,16 +2553,12 @@ button.rotation-chip:hover {
 }
 
 .today-button:hover {
-  border-style: solid;
-  border-color: var(--accent);
-  color: var(--text);
+  filter: brightness(1.06);
 }
 
-/* Ya se esta viendo el mes actual. */
-.today-button.current {
-  border-style: solid;
-  border-color: var(--border-soft);
-  background: var(--surface);
+/* Fuera del mes actual se marca con un contorno para invitar a regresar. */
+.today-button:not(.current) {
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35);
 }
 
 /* Rayita del mes actual (cuando no es el que se ve): un punto debajo. */
