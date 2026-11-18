@@ -21,7 +21,7 @@ import MailSettings from "./MailSettings.jsx";
 import { dateKey, findRotationGuard } from "./auditRotation";
 import { resolveRecipients } from "./mailSettings";
 
-const YEAR = 2026;
+import { MAX_DATE, MIN_DATE } from "./calendarYears";
 
 const WEEKDAY_OPTIONS = [
   { value: 1, label: "Lunes" },
@@ -50,10 +50,10 @@ const THEME_LABELS = { system: "Automatico", light: "Claro", dark: "Oscuro" };
 
 const WEEKDAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
-// "2026-04-02" -> "Abril" (con el anio si no es el del calendario)
+// "2026-04-02" -> "Abril 2026" (el calendario maneja varios anios)
 function monthLabel(dayKey) {
   const [year, month] = dayKey.split("-").map(Number);
-  return year === YEAR ? MONTH_NAMES[month - 1] : `${MONTH_NAMES[month - 1]} ${year}`;
+  return `${MONTH_NAMES[month - 1]} ${year}`;
 }
 
 // Agrupa los feriados por mes: [{ month: "Abril", days: [{ dayKey, day: 2, weekday: "Jueves" }, ...] }]
@@ -547,8 +547,8 @@ export default function SettingsModal({
               <form className="holiday-form" onSubmit={submitHoliday}>
                 <input
                   type="date"
-                  min={`${YEAR}-01-01`}
-                  max={`${YEAR}-12-31`}
+                  min={MIN_DATE}
+                  max={MAX_DATE}
                   value={newHolidayDate}
                   onChange={(event) => setNewHolidayDate(event.target.value)}
                   aria-label="Fecha del feriado"
