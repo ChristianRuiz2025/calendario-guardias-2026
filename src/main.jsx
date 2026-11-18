@@ -448,12 +448,10 @@ function App() {
   // Hoy: el boton de arriba regresa al mes actual.
   const today = new Date();
   const todayMonth = clampMonth(today.getFullYear(), today.getMonth());
-  const todayLabel = new Intl.DateTimeFormat("es-MX", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(today);
+  // "Martes 17 de noviembre de 2026"
+  const todayWeekday = new Intl.DateTimeFormat("es-MX", { weekday: "long" }).format(today);
+  const todayMonthName = new Intl.DateTimeFormat("es-MX", { month: "long" }).format(today);
+  const todayLabel = `${todayWeekday.charAt(0).toUpperCase()}${todayWeekday.slice(1)} ${today.getDate()} de ${todayMonthName} de ${today.getFullYear()}`;
 
   // Tira de meses: las 12 rayitas del anio que se ve (cada mes siempre en su lugar).
   const monthStrip = Array.from({ length: 12 }, (_, index) => ({ year, monthIndex: index }));
@@ -694,7 +692,10 @@ function App() {
               title="Ir al mes actual"
             >
               <CalendarCheck size={16} aria-hidden="true" />
-              <span>Hoy, {todayLabel}</span>
+              <span className="today-text">
+                <small>Hoy</small>
+                <strong>{todayLabel}</strong>
+              </span>
             </button>
             <div className="panel month-stepper">
               <button
