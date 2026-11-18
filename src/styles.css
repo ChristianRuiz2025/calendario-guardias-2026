@@ -2508,6 +2508,14 @@ button.rotation-chip:hover {
   box-shadow: inset 0 0 0 2px #000000;
 }
 
+/* En tema oscuro el resaltado va en blanco. */
+:root[data-theme="dark"] .guard-calendar .assignment-column:hover,
+:root[data-theme="dark"] .guard-calendar .assignment-column:focus-visible,
+:root[data-theme="dark"] .guard-calendar .audit-select:hover,
+:root[data-theme="dark"] .guard-calendar .audit-select:focus-visible {
+  box-shadow: inset 0 0 0 2px #ffffff;
+}
+
 /* Tema oscuro: iniciales de los turnos, nombres de auditorias y feriados en blanco. */
 :root[data-theme="dark"] .guard-calendar .assignment-column:not(.off-duty),
 :root[data-theme="dark"] .guard-calendar .vacation-initial,
