@@ -134,7 +134,9 @@
 /* Dia festivo: la tarjeta queda igual que los demas dias y el aviso va dentro, redondeado
    como los turnos. */
 .guard-calendar.refined .schedule-row td.holiday {
-  background: var(--surface-2);
+  /* background-color (no "background"): el atajo reiniciaba background-clip y el fondo del
+     feriado se extendia al espacio entre semanas. */
+  background-color: var(--surface-2);
 }
 
 .guard-calendar.refined .schedule-row td.holiday .no-class {

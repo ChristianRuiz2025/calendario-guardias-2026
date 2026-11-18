@@ -2493,3 +2493,30 @@ button.rotation-chip:hover {
 .week-mark-sample.stripe {
   border-left: 5px solid #f38ba8;
 }
+
+/* Turnos y auditorias: resaltado negro al pasar el raton (y con teclado), en lugar del contorno
+   de color que se quedaba al dar clic. */
+.guard-calendar .assignment-column:focus,
+.guard-calendar .audit-select:focus {
+  box-shadow: none;
+}
+
+.guard-calendar .assignment-column:hover,
+.guard-calendar .assignment-column:focus-visible,
+.guard-calendar .audit-select:hover,
+.guard-calendar .audit-select:focus-visible {
+  box-shadow: inset 0 0 0 2px #000000;
+}
+
+/* Tema oscuro: iniciales de los turnos y nombres de auditorias en blanco. */
+:root[data-theme="dark"] .guard-calendar .assignment-column:not(.off-duty),
+:root[data-theme="dark"] .guard-calendar .vacation-initial,
+:root[data-theme="dark"] .guard-calendar .audit-select:not(.unassigned) {
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+/* La lista que se abre al elegir auditorias conserva los colores del tema. */
+:root[data-theme="dark"] .guard-calendar .audit-select option {
+  text-shadow: none;
+}

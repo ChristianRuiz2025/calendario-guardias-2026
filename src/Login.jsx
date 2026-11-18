@@ -19,7 +19,7 @@ export default function Login({ onLogin }) {
       const { user } = await apiRequest("/api/auth", { method: "POST", body: { action: "login", email, password } });
       onLogin(user);
     } catch (signInError) {
-      setError(signInError.status === 401 ? "Correo o contrasena incorrectos." : signInError.message);
+      setError(signInError.status === 401 ? "Correo o contraseña incorrectos." : signInError.message);
     } finally {
       setSubmitting(false);
     }
@@ -44,7 +44,7 @@ export default function Login({ onLogin }) {
         </section>
 
         <form className="login-card" onSubmit={handleSubmit}>
-          <h2>Inicia sesion</h2>
+          <h2>Inicia sesión</h2>
 
           <label htmlFor="login-email">Correo</label>
           <input
@@ -56,7 +56,7 @@ export default function Login({ onLogin }) {
             required
           />
 
-          <label htmlFor="login-password">Contrasena</label>
+          <label htmlFor="login-password">Contraseña</label>
           <div className="login-password">
             <input
               id="login-password"
@@ -70,9 +70,9 @@ export default function Login({ onLogin }) {
               type="button"
               className="login-eye"
               onClick={() => setShowPassword((current) => !current)}
-              aria-label={showPassword ? "Ocultar contrasena" : "Mostrar contrasena"}
+              aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
               aria-pressed={showPassword}
-              title={showPassword ? "Ocultar contrasena" : "Mostrar contrasena"}
+              title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
