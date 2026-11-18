@@ -2568,3 +2568,13 @@ button.rotation-chip:hover {
 .month-strip button.today:not(.active)::before {
   background: var(--muted);
 }
+
+/* Turnos de otras personas: se ven igual pero no se pueden cambiar ni se resaltan. */
+.guard-calendar .assignment-column.locked {
+  cursor: default;
+}
+
+.guard-calendar .assignment-column.locked:hover,
+:root[data-theme="dark"] .guard-calendar .assignment-column.locked:hover {
+  box-shadow: none;
+}

@@ -943,6 +943,13 @@ function App() {
                                     const span = selectedShift ? shifts.length - selectedShift.position : shifts.length;
                                     const rowStart = selectedShift ? selectedShift.position + 1 : 1;
 
+                                    // Solo la persona que inicio sesion puede cambiar sus propios turnos
+                                    // (la API tambien lo valida).
+                                    const isMine = guard.id === currentGuard?.id;
+                                    const shiftText = selectedShift
+                                      ? `${guard.name}: ${selectedShift.start} - ${selectedShift.end}.`
+                                      : `${guard.name}: Sin turno.`;
+
                                     return (
                                       <button
                                         type="button"
@@ -950,17 +957,19 @@ function App() {
                                         className={[
                                           "assignment-column",
                                           !selectedShift ? "off-duty" : "",
+                                          isMine ? "" : "locked",
                                         ].join(" ")}
-                                        onClick={() => cycleAssignment(key, guard.id, currentAssignment)}
+                                        onClick={isMine ? () => cycleAssignment(key, guard.id, currentAssignment) : undefined}
+                                        aria-disabled={isMine ? undefined : "true"}
                                         style={{
                                           backgroundColor: selectedShift ? guard.color : undefined,
                                           gridColumn: guardIndex + 1,
                                           gridRow: `${rowStart} / span ${span}`,
                                         }}
                                         title={
-                                          selectedShift
-                                            ? `${guard.name}: ${selectedShift.start} - ${selectedShift.end}. Click para cambiar.`
-                                            : `${guard.name}: Sin guardia. Click para cambiar.`
+                                          isMine
+                                            ? `${shiftText} Click para cambiar tu turno.`
+                                            : `${shiftText} Solo ${guard.name} puede cambiar sus turnos.`
                                         }
                                       >
                                         {guard.initials}
