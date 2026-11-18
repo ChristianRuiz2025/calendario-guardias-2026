@@ -2529,3 +2529,42 @@ button.rotation-chip:hover {
 :root[data-theme="dark"] .guard-calendar .audit-select option {
   text-shadow: none;
 }
+
+/* Boton "Hoy" arriba del mes: muestra la fecha de hoy y regresa al mes actual. */
+.today-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 34px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 0 12px;
+  background: transparent;
+  color: var(--muted-strong);
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.today-button span::first-letter {
+  text-transform: uppercase;
+}
+
+.today-button:hover {
+  border-style: solid;
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+/* Ya se esta viendo el mes actual. */
+.today-button.current {
+  border-style: solid;
+  border-color: var(--border-soft);
+  background: var(--surface);
+}
+
+/* Rayita del mes actual (cuando no es el que se ve): un punto debajo. */
+.month-strip button.today:not(.active)::before {
+  background: var(--muted);
+}

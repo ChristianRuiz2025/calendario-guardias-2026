@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { ChevronLeft, ChevronRight, Download, Mail } from "lucide-react";
+import { CalendarCheck, ChevronLeft, ChevronRight, Download, Mail } from "lucide-react";
 import "./styles.css";
 // Diseno refinado del calendario. Para regresar al anterior, quita esta linea.
 import "./calendarRefined.css";
@@ -438,15 +438,24 @@ function App() {
 
   // Avanza o retrocede meses, cambiando de anio si hace falta.
   function moveMonth(delta) {
-    const next = fromMonthNumber(monthNumber(year, monthIndex) + delta);
-    showMonth(next.year, next.monthIndex);
+    setView((current) => {
+      const next = fromMonthNumber(monthNumber(current.year, current.monthIndex) + delta);
+      return clampMonth(next.year, next.monthIndex);
+    });
   }
 
-  // Tira de meses: 12 rayitas empezando en el mes actual.
-  const todayMonth = clampMonth(new Date().getFullYear(), new Date().getMonth());
-  const monthStrip = Array.from({ length: 12 }, (_, offset) =>
-    fromMonthNumber(monthNumber(todayMonth.year, todayMonth.monthIndex) + offset)
-  );
+  // Hoy: el boton de arriba regresa al mes actual.
+  const today = new Date();
+  const todayMonth = clampMonth(today.getFullYear(), today.getMonth());
+  const todayLabel = new Intl.DateTimeFormat("es-MX", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(today);
+
+  // Tira de meses: las 12 rayitas del anio que se ve (cada mes siempre en su lugar).
+  const monthStrip = Array.from({ length: 12 }, (_, index) => ({ year, monthIndex: index }));
   const {
     guards,
     assignments,
@@ -674,6 +683,18 @@ function App() {
 
           {/* Mes: flechas y una tira con los 12 meses (cada rayita lleva a su mes). */}
           <div className="month-picker">
+            <button
+              type="button"
+              className={[
+                "today-button",
+                todayMonth.year === year && todayMonth.monthIndex === monthIndex ? "current" : "",
+              ].join(" ")}
+              onClick={() => showMonth(todayMonth.year, todayMonth.monthIndex)}
+              title="Ir al mes actual"
+            >
+              <CalendarCheck size={16} aria-hidden="true" />
+              <span>Hoy, {todayLabel}</span>
+            </button>
             <div className="panel month-stepper">
               <button
                 type="button"
@@ -700,12 +721,13 @@ function App() {
             <div className="month-strip">
               {monthStrip.map((item) => {
                 const label = `${MONTHS[item.monthIndex]} ${item.year}`;
-                const active = item.year === year && item.monthIndex === monthIndex;
+                const active = item.monthIndex === monthIndex;
+                const isToday = item.year === todayMonth.year && item.monthIndex === todayMonth.monthIndex;
                 return (
                   <button
                     key={label}
                     type="button"
-                    className={active ? "active" : ""}
+                    className={[active ? "active" : "", isToday ? "today" : ""].join(" ")}
                     onClick={() => showMonth(item.year, item.monthIndex)}
                     aria-label={label}
                     aria-current={active ? "true" : undefined}
