@@ -13,6 +13,7 @@ import SettingsModal from "./SettingsModal";
 import VacationPanel from "./VacationPanel";
 import { BrandMark } from "./BrandLogo";
 import SidebarMenu from "./SidebarMenu";
+import AppTooltip from "./AppTooltip";
 import logoForEmail from "./assets/siclik-cesa.png";
 import LunchPanel from "./LunchPanel";
 import DownloadOptions, { useIcsKinds } from "./DownloadOptions";
@@ -1041,4 +1042,9 @@ function App() {
   );
 }
 
-createRoot(document.getElementById("root")).render(<App />);
+createRoot(document.getElementById("root")).render(
+  <>
+    <App />
+    <AppTooltip />
+  </>
+);

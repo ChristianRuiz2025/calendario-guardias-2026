@@ -2578,3 +2578,36 @@ button.rotation-chip:hover {
 :root[data-theme="dark"] .guard-calendar .assignment-column.locked:hover {
   box-shadow: none;
 }
+
+/* Etiquetas al pasar el raton (src/AppTooltip.jsx). */
+.app-tooltip {
+  position: fixed;
+  z-index: 100;
+  max-width: 280px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(10, 30, 46, 0.18);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.35;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.app-tooltip.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* En estilo Cristal, con mas cuerpo para leerse sobre el contenido. */
+:root[data-style="cristal"] .app-tooltip {
+  border-color: var(--glass-edge);
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
