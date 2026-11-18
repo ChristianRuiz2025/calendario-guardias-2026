@@ -620,9 +620,9 @@ function App() {
     const root = document.documentElement;
     const previousStyle = root.dataset.style;
     try {
-      // El estilo cristal (translucido y con desenfoque) no sale bien en la foto: se toma con el clasico.
-      if (previousStyle && previousStyle !== "clasico") {
-        root.dataset.style = "clasico";
+      // La foto se toma con los estilos base (solidos): el cristal y los demas no salen bien en la imagen.
+      if (previousStyle) {
+        root.dataset.style = "foto";
         await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       }
       const { toPng } = await import("html-to-image");

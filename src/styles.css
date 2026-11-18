@@ -2742,3 +2742,9 @@ button.rotation-chip:hover {
   align-items: center;
   gap: 10px;
 }
+
+/* Franja roja de CESA a la izquierda del titulo de la barra lateral, en todos los estilos (mas
+   especifico que las reglas de borde de cada estilo). */
+:root .sidebar .brand.compact {
+  border-left: 4px solid #ea0a2a;
+}

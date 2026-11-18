@@ -51,10 +51,9 @@ const MONTH_NAMES = [
 
 const THEME_LABELS = { system: "Automatico", light: "Claro", dark: "Oscuro" };
 
-// Estilos de Configuracion > Apariencia (ver src/useTheme.js); Marca CESA es el predeterminado.
+// Estilos de Configuracion > Apariencia (ver src/useTheme.js); Clasico ("cesa") es el predeterminado.
 const STYLE_OPTIONS = [
-  { id: "cesa", label: "Marca CESA", hint: "Predeterminado: grises con el rojo de CESA" },
-  { id: "clasico", label: "Clasico", hint: "Azul grisaceo, tarjetas solidas" },
+  { id: "cesa", label: "Clásico", hint: "Predeterminado: grises con el rojo de CESA" },
   { id: "cristal", label: "Cristal", hint: "Translucido sobre fondo de color" },
   { id: "papel", label: "Papel", hint: "Crema, letra tipo libro, como impreso" },
   { id: "pastel", label: "Pastel", hint: "Tonos suaves y esquinas redondeadas" },

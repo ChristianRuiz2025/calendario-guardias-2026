@@ -58,7 +58,7 @@ export function useTheme() {
 const STYLE_STORAGE_KEY = "calendario-estilo";
 // Estilos visuales disponibles en Configuracion > Apariencia.
 // "cesa" es el predeterminado.
-export const STYLE_MODES = ["cesa", "clasico", "cristal", "papel", "pastel"];
+export const STYLE_MODES = ["cesa", "cristal", "papel", "pastel"];
 export const DEFAULT_STYLE = "cesa";
 
 function readStoredStyle() {
@@ -70,7 +70,7 @@ function readStoredStyle() {
   }
 }
 
-// Estilo de la app: "cesa" (predeterminado, src/themeCesa.css), "clasico", "cristal"
+// Estilo de la app: "cesa" (se muestra como "Clasico"; predeterminado, src/themeCesa.css), "cristal"
 // (src/themeGlass.css), "papel" (src/themePaper.css) o "pastel" (src/themePastel.css). Se pone en <html data-style="..."> y se guarda en este navegador.
 export function useStyleMode() {
   const [styleMode, setStyleModeState] = useState(readStoredStyle);

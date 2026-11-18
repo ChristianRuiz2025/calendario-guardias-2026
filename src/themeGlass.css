@@ -1,6 +1,6 @@
 /* Estilo "Cristal" (Configuracion > Apariencia): tarjetas translucidas con desenfoque sobre un
    fondo con manchas de color. Solo aplica con <html data-style="cristal"> (lo pone useStyleMode
-   en src/useTheme.js); con "clasico" este archivo no hace nada. */
+   en src/useTheme.js); con cualquier otro estilo este archivo no hace nada. */
 
 /* Colores en modo claro. */
 :root[data-style="cristal"] {
@@ -115,10 +115,6 @@
   height: 26px;
   border-radius: 8px;
   border: 1px solid var(--border);
-}
-
-.style-swatch.clasico {
-  background: linear-gradient(135deg, #eef3f7 50%, #236996 50%);
 }
 
 .style-swatch.cesa {
